@@ -1,0 +1,23 @@
+{
+  "background_color": "#272827",
+  "description": "Development build of Kanyah.",
+  "display": "standalone",
+  "icons": [
+    {
+      "purpose": "any maskable",
+      "sizes": "192x192",
+      "src": "/pwa-dev-icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "/pwa-dev-icon-512.png",
+      "type": "image/png"
+    }
+  ],
+  "name": "Kanyah Dev",
+  "short_name": "Kanyah Dev",
+  "start_url": "/",
+  "theme_color": "#F16022"
+}

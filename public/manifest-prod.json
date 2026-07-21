@@ -1,0 +1,23 @@
+{
+  "background_color": "#F0EFEF",
+  "description": "Mobile-first storytelling for children, set up and guided by parents.",
+  "display": "standalone",
+  "icons": [
+    {
+      "purpose": "any maskable",
+      "sizes": "192x192",
+      "src": "/pwa-prod-icon-192.png",
+      "type": "image/png"
+    },
+    {
+      "purpose": "any maskable",
+      "sizes": "512x512",
+      "src": "/pwa-prod-icon-512.png",
+      "type": "image/png"
+    }
+  ],
+  "name": "Kanyah",
+  "short_name": "Kanyah",
+  "start_url": "/",
+  "theme_color": "#39205B"
+}
