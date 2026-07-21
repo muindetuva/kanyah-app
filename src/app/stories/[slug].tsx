@@ -91,7 +91,7 @@ export default function StoryReaderScreen() {
               {error instanceof Error ? error.message : 'Failed to load this story.'}
             </Text>
             <View style={styles.stateActions}>
-              <Pressable onPress={() => router.back()} style={styles.secondaryButton}>
+              <Pressable onPress={() => router.replace('/stories')} style={styles.secondaryButton}>
                 <Text style={styles.secondaryButtonText}>Back</Text>
               </Pressable>
               <Pressable onPress={() => refetch()} style={styles.primaryButton}>
@@ -110,7 +110,7 @@ export default function StoryReaderScreen() {
     <SafeAreaView style={styles.safeArea}>
       <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.indigo}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable onPress={() => router.replace('/stories')} style={styles.backButton}>
             <Text style={styles.backButtonText}>Back</Text>
           </Pressable>
           <Text style={styles.counter}>
