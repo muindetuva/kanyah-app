@@ -89,24 +89,27 @@ const footerGroups = [
 ] as const
 
 type TextileBackgroundProps = {
+  columns?: number
   count: number
   opacity?: number
 }
 
-function TextileBackground({ count, opacity = 1 }: TextileBackgroundProps) {
+function TextileBackground({ columns = 1, count, opacity = 1 }: TextileBackgroundProps) {
+  const tileWidth = `${100 / columns}%` as `${number}%`
+
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       pointerEvents="none"
-      style={[styles.textileBackground, { opacity }]}
+      style={[styles.textileBackground, columns > 1 && styles.textileBackgroundGrid, { opacity }]}
     >
-      {Array.from({ length: count }, (_, index) => (
+      {Array.from({ length: count * columns }, (_, index) => (
         <Image
           contentFit="fill"
           key={index}
           source={yellowBackground}
-          style={styles.textileTile}
+          style={[styles.textileTile, { width: tileWidth }]}
         />
       ))}
     </View>
@@ -123,20 +126,34 @@ function MenuIcon() {
   )
 }
 
-function PatternDivider() {
+function PatternDivider({ columns = 1 }: { columns?: number }) {
   return (
     <View accessibilityElementsHidden style={styles.patternDivider}>
-      <Image contentFit="cover" source={yellowBackground} style={styles.patternDividerImage} />
+      {Array.from({ length: columns }, (_, index) => (
+        <Image
+          contentFit="cover"
+          key={index}
+          source={yellowBackground}
+          style={styles.patternDividerImage}
+        />
+      ))}
     </View>
   )
 }
 
 export default function HomeScreen() {
-  const { height: viewportHeight } = useWindowDimensions()
+  const { height: viewportHeight, width: viewportWidth } = useWindowDimensions()
   const [email, setEmail] = useState('')
   const [emailError, setEmailError] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
   const scrollViewRef = useRef<ScrollView>(null)
+  const howItWorksPosition = useRef(0)
   const waitlistPosition = useRef(0)
+  const isTablet = viewportWidth >= 700
+  const isDesktop = viewportWidth >= 1024
+  const isWideDesktop = viewportWidth >= 1280
+  const patternColumns = isDesktop ? 3 : isTablet ? 2 : 1
+  const responsiveHeaderHeight = isDesktop ? 116 : isTablet ? 108 : headerHeight
   const waitlistMutation = useMutation({
     mutationFn: joinWaitlist,
     onSuccess: () => {
@@ -167,9 +184,14 @@ export default function HomeScreen() {
         ? 'We couldn’t save your email. Please try again.'
         : null
 
+  const scrollTo = (position: number) => {
+    setMenuOpen(false)
+    scrollViewRef.current?.scrollTo({ animated: true, y: position })
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.yellow}>
+      <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.yellow} responsive>
         <ScrollView
           bounces={false}
           contentContainerStyle={styles.page}
@@ -177,89 +199,224 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           style={styles.scrollView}
         >
-          <View style={styles.header}>
-            <TextileBackground count={1} opacity={0.22} />
+          <View style={[styles.header, isTablet && styles.headerTablet]}>
+            <TextileBackground columns={patternColumns} count={1} opacity={0.22} />
 
-            <Image
-              accessibilityLabel="Kanyah"
-              contentFit="contain"
-              source={kanyahLogo}
-              style={styles.logo}
-            />
+            <View style={[styles.headerInner, isTablet && styles.headerInnerTablet]}>
+              <Image
+                accessibilityLabel="Kanyah"
+                contentFit="contain"
+                source={kanyahLogo}
+                style={[styles.logo, isTablet && styles.logoTablet]}
+              />
 
-            <Pressable
-              accessibilityLabel="Open menu"
-              accessibilityRole="button"
-              hitSlop={10}
-              style={({ pressed }) => [styles.menuButton, pressed && styles.buttonPressed]}
-            >
-              <MenuIcon />
-            </Pressable>
+              {isDesktop ? (
+                <View style={styles.desktopNavigation}>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => scrollTo(howItWorksPosition.current)}
+                    style={({ pressed }) => [styles.desktopNavLink, pressed && styles.buttonPressed]}
+                  >
+                    <Text style={styles.desktopNavLinkText}>HOW IT WORKS</Text>
+                  </Pressable>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => scrollTo(waitlistPosition.current)}
+                    style={({ pressed }) => [styles.desktopNavCta, pressed && styles.buttonPressed]}
+                  >
+                    <Text style={styles.desktopNavCtaText}>JOIN WAITLIST</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityLabel={menuOpen ? 'Close menu' : 'Open menu'}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: menuOpen }}
+                  hitSlop={10}
+                  onPress={() => setMenuOpen((open) => !open)}
+                  style={({ pressed }) => [styles.menuButton, pressed && styles.buttonPressed]}
+                >
+                  <MenuIcon />
+                </Pressable>
+              )}
+            </View>
+
+            {!isDesktop && menuOpen ? (
+              <View style={[styles.mobileMenu, isTablet && styles.mobileMenuTablet]}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => scrollTo(howItWorksPosition.current)}
+                  style={({ pressed }) => [styles.mobileMenuItem, pressed && styles.mobileMenuItemPressed]}
+                >
+                  <Text style={styles.mobileMenuItemText}>HOW IT WORKS</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => scrollTo(waitlistPosition.current)}
+                  style={({ pressed }) => [styles.mobileMenuItem, pressed && styles.mobileMenuItemPressed]}
+                >
+                  <Text style={styles.mobileMenuItemText}>JOIN WAITLIST</Text>
+                </Pressable>
+              </View>
+            ) : null}
           </View>
 
-          <View style={[styles.hero, { minHeight: Math.max(viewportHeight - headerHeight, 0) }]}>
-            <TextileBackground count={5} />
+          <View
+            style={[
+              styles.hero,
+              {
+                minHeight: Math.max(
+                  viewportHeight - responsiveHeaderHeight,
+                  isDesktop ? 700 : 0,
+                ),
+              },
+            ]}
+          >
+            <TextileBackground columns={patternColumns} count={isDesktop ? 3 : 5} />
 
-            <View style={styles.heroContent}>
-              <Text style={styles.eyebrow}>AFRICA&apos;S STORYTELLING PLATFORM</Text>
+            <View
+              style={[
+                styles.heroContent,
+                isTablet && styles.heroContentTablet,
+                isDesktop && styles.heroContentDesktop,
+              ]}
+            >
+              <View style={[styles.heroCopy, isDesktop && styles.heroCopyDesktop]}>
+                <Text style={[styles.eyebrow, isDesktop && styles.eyebrowDesktop]}>
+                  AFRICA&apos;S STORYTELLING PLATFORM
+                </Text>
 
-              <View style={styles.headlineGroup}>
-                <Text adjustsFontSizeToFit numberOfLines={1} style={styles.headline}>
-                  STORIES THAT LIVE
+                {isDesktop ? (
+                  <View style={[styles.headlineGroup, styles.headlineGroupDesktop]}>
+                    <Text
+                      style={[
+                        styles.headline,
+                        styles.headlineDesktop,
+                        !isWideDesktop && styles.headlineCompactDesktop,
+                      ]}
+                    >
+                      STORIES THAT
+                    </Text>
+                    <Text
+                      style={[
+                        styles.headline,
+                        styles.headlineDesktop,
+                        !isWideDesktop && styles.headlineCompactDesktop,
+                      ]}
+                    >
+                      LIVE WITH YOU
+                    </Text>
+                    <Text
+                      style={[
+                        styles.headline,
+                        styles.headlineDesktop,
+                        !isWideDesktop && styles.headlineCompactDesktop,
+                        styles.headlineAccent,
+                      ]}
+                    >
+                      FOREVER
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.headlineGroup}>
+                    <Text
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[styles.headline, isTablet && styles.headlineTablet]}
+                    >
+                      STORIES THAT LIVE
+                    </Text>
+                    <Text
+                      adjustsFontSizeToFit
+                      numberOfLines={1}
+                      style={[styles.headline, isTablet && styles.headlineTablet]}
+                    >
+                      WITH YOU <Text style={styles.headlineAccent}>FOREVER</Text>
+                    </Text>
+                  </View>
+                )}
+
+                <Text
+                  style={[
+                    styles.supportingCopy,
+                    isTablet && styles.supportingCopyTablet,
+                    isDesktop && styles.supportingCopyDesktop,
+                  ]}
+                >
+                  Empowering the next generation with vibrant digital libraries inspired by the rhythmic spirit of African folklore.
                 </Text>
-                <Text adjustsFontSizeToFit numberOfLines={1} style={styles.headline}>
-                  WITH YOU <Text style={styles.headlineAccent}>FOREVER</Text>
-                </Text>
+
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => scrollTo(waitlistPosition.current)}
+                  style={({ pressed }) => [
+                    styles.waitlistButton,
+                    isDesktop && styles.waitlistButtonDesktop,
+                    pressed && styles.buttonPressed,
+                  ]}
+                >
+                  <Text style={[styles.waitlistButtonText, isDesktop && styles.waitlistButtonTextDesktop]}>
+                    JOIN WAITLIST
+                  </Text>
+                </Pressable>
               </View>
-
-              <Text style={styles.supportingCopy}>
-                Empowering the next generation with vibrant digital libraries inspired by the rhythmic spirit of African folklore.
-              </Text>
-
-              <Pressable
-                accessibilityRole="button"
-                onPress={() =>
-                  scrollViewRef.current?.scrollTo({ animated: true, y: waitlistPosition.current })
-                }
-                style={({ pressed }) => [styles.waitlistButton, pressed && styles.buttonPressed]}
-              >
-                <Text style={styles.waitlistButtonText}>JOIN WAITLIST</Text>
-              </Pressable>
 
               <Image
                 accessibilityLabel="Juma surrounded by flowing musical magic in an African village"
                 contentFit="cover"
                 source={jumaArtwork}
-                style={styles.jumaArtwork}
+                style={[
+                  styles.jumaArtwork,
+                  isTablet && styles.jumaArtworkTablet,
+                  isDesktop && styles.jumaArtworkDesktop,
+                ]}
               />
             </View>
           </View>
 
-          <PatternDivider />
+          <PatternDivider columns={patternColumns} />
 
           <View style={styles.trustSection}>
-            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.trustHeading}>
-              TRUSTED BY PARENTS ACROSS AFRICA
-            </Text>
-            <Image
-              accessibilityLabel="Trusted, safe, loved, and educational"
-              contentFit="contain"
-              source={trustedByIcons}
-              style={styles.trustedByIcons}
-            />
+            <View style={[styles.trustContent, isTablet && styles.trustContentTablet]}>
+              <Text
+                adjustsFontSizeToFit
+                numberOfLines={1}
+                style={[styles.trustHeading, isTablet && styles.trustHeadingTablet]}
+              >
+                TRUSTED BY PARENTS ACROSS AFRICA
+              </Text>
+              <Image
+                accessibilityLabel="Trusted, safe, loved, and educational"
+                contentFit="contain"
+                source={trustedByIcons}
+                style={[styles.trustedByIcons, isTablet && styles.trustedByIconsTablet]}
+              />
+            </View>
           </View>
 
-          <PatternDivider />
+          <PatternDivider columns={patternColumns} />
 
-          <View style={styles.howItWorksSection}>
-            <Text style={styles.howItWorksHeading}>HOW IT WORKS</Text>
+          <View
+            onLayout={(event) => {
+              howItWorksPosition.current = event.nativeEvent.layout.y
+            }}
+            style={[styles.howItWorksSection, isTablet && styles.howItWorksSectionTablet]}
+          >
+            <Text style={[styles.howItWorksHeading, isTablet && styles.howItWorksHeadingTablet]}>
+              HOW IT WORKS
+            </Text>
             <View style={styles.headingUnderline} />
 
-            <View style={styles.cards}>
+            <View style={[styles.cards, isTablet && styles.cardsTablet]}>
               {howItWorksItems.map((item) => (
                 <View
                   key={item.title}
-                  style={[styles.howItWorksCard, { borderBottomColor: item.accent }]}
+                  style={[
+                    styles.howItWorksCard,
+                    isTablet && styles.howItWorksCardTablet,
+                    isDesktop && styles.howItWorksCardDesktop,
+                    { borderBottomColor: item.accent },
+                  ]}
                 >
                   <Image
                     accessibilityElementsHidden
@@ -275,70 +432,78 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <PatternDivider />
+          <PatternDivider columns={patternColumns} />
 
           <View
             onLayout={(event) => {
               waitlistPosition.current = event.nativeEvent.layout.y
             }}
-            style={styles.waitlistSection}
+            style={[styles.waitlistSection, isDesktop && styles.waitlistSectionDesktop]}
           >
-            <TextileBackground count={4} opacity={0.1} />
+            <TextileBackground columns={patternColumns} count={4} opacity={0.1} />
 
-            <View style={styles.waitlistContent}>
-              <Text style={styles.waitlistHeading}>JOIN OUR WAITLIST</Text>
-              <Text style={styles.waitlistCopy}>
-                Be the first to know when we launch and get exclusive early access to our premium collection.
-              </Text>
+            <View style={[styles.waitlistContent, isDesktop && styles.waitlistContentDesktop]}>
+              <View style={[styles.waitlistIntro, isDesktop && styles.waitlistIntroDesktop]}>
+                <Text style={[styles.waitlistHeading, isDesktop && styles.waitlistHeadingDesktop]}>
+                  JOIN OUR WAITLIST
+                </Text>
+                <Text style={[styles.waitlistCopy, isDesktop && styles.waitlistCopyDesktop]}>
+                  Be the first to know when we launch and get exclusive early access to our premium collection.
+                </Text>
+              </View>
 
-              <View style={styles.waitlistForm}>
-                <TextInput
-                  accessibilityLabel="Your email address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  editable={!waitlistMutation.isPending}
-                  inputMode="email"
-                  keyboardType="email-address"
-                  onChangeText={(value) => {
-                    setEmail(value)
-                    setEmailError(null)
-                    waitlistMutation.reset()
-                  }}
-                  onSubmitEditing={submitWaitlist}
-                  placeholder="Your email address"
-                  placeholderTextColor="#898183"
-                  returnKeyType="done"
-                  selectionColor={colors.purple}
-                  style={styles.emailInput}
-                  value={email}
-                />
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityState={{
-                    disabled: waitlistMutation.isPending || waitlistMutation.isSuccess,
-                  }}
-                  disabled={waitlistMutation.isPending || waitlistMutation.isSuccess}
-                  onPress={submitWaitlist}
-                  style={({ pressed }) => [
-                    styles.waitlistSubmitButton,
-                    pressed && styles.buttonPressed,
-                    waitlistMutation.isSuccess && styles.waitlistSubmitButtonSuccess,
-                  ]}
-                >
-                  <Text style={styles.waitlistSubmitText}>
-                    {waitlistMutation.isPending
-                      ? 'JOINING…'
-                      : waitlistMutation.isSuccess
-                        ? 'YOU’RE ON THE LIST'
-                        : 'JOIN WAITLIST TODAY'}
-                  </Text>
-                </Pressable>
+              <View style={[styles.waitlistForm, isDesktop && styles.waitlistFormDesktop]}>
+                <View style={[styles.waitlistFields, isDesktop && styles.waitlistFieldsDesktop]}>
+                  <TextInput
+                    accessibilityLabel="Your email address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    editable={!waitlistMutation.isPending}
+                    inputMode="email"
+                    keyboardType="email-address"
+                    onChangeText={(value) => {
+                      setEmail(value)
+                      setEmailError(null)
+                      waitlistMutation.reset()
+                    }}
+                    onSubmitEditing={submitWaitlist}
+                    placeholder="Your email address"
+                    placeholderTextColor="#898183"
+                    returnKeyType="done"
+                    selectionColor={colors.purple}
+                    style={[styles.emailInput, isDesktop && styles.emailInputDesktop]}
+                    value={email}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityState={{
+                      disabled: waitlistMutation.isPending || waitlistMutation.isSuccess,
+                    }}
+                    disabled={waitlistMutation.isPending || waitlistMutation.isSuccess}
+                    onPress={submitWaitlist}
+                    style={({ pressed }) => [
+                      styles.waitlistSubmitButton,
+                      isDesktop && styles.waitlistSubmitButtonDesktop,
+                      pressed && styles.buttonPressed,
+                      waitlistMutation.isSuccess && styles.waitlistSubmitButtonSuccess,
+                    ]}
+                  >
+                    <Text style={[styles.waitlistSubmitText, isDesktop && styles.waitlistSubmitTextDesktop]}>
+                      {waitlistMutation.isPending
+                        ? 'JOINING…'
+                        : waitlistMutation.isSuccess
+                          ? 'YOU’RE ON THE LIST'
+                          : 'JOIN WAITLIST TODAY'}
+                    </Text>
+                  </Pressable>
+                </View>
 
                 {waitlistStatus ? (
                   <Text
                     accessibilityLiveRegion="polite"
                     style={[
                       styles.waitlistStatus,
+                      isDesktop && styles.waitlistStatusDesktop,
                       (emailError || waitlistMutation.isError) && styles.waitlistStatusError,
                     ]}
                   >
@@ -349,53 +514,59 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          <PatternDivider />
+          <PatternDivider columns={patternColumns} />
 
-          <View style={styles.footer}>
-            <TextileBackground count={5} opacity={0.07} />
+          <View style={[styles.footer, isDesktop && styles.footerDesktop]}>
+            <TextileBackground columns={patternColumns} count={5} opacity={0.07} />
 
-            <View style={styles.footerContent}>
-              <Image
-                accessibilityLabel="Kanyah"
-                contentFit="contain"
-                source={kanyahLogoWhite}
-                style={styles.footerLogo}
-              />
+            <View style={[styles.footerContent, isDesktop && styles.footerContentDesktop]}>
+              <View style={[styles.footerMain, isDesktop && styles.footerMainDesktop]}>
+                <View style={[styles.footerBrand, isDesktop && styles.footerBrandDesktop]}>
+                  <Image
+                    accessibilityLabel="Kanyah"
+                    contentFit="contain"
+                    source={kanyahLogoWhite}
+                    style={styles.footerLogo}
+                  />
 
-              <Text style={styles.footerTagline}>
-                Bringing the vibrant world of African storytelling to digital screens globally.
-              </Text>
+                  <Text style={styles.footerTagline}>
+                    Bringing the vibrant world of African storytelling to digital screens globally.
+                  </Text>
+                </View>
 
-              <View style={styles.footerGroups}>
-                {footerGroups.map((group) => (
-                  <View key={group.title} style={styles.footerGroup}>
-                    <Text style={styles.footerGroupTitle}>{group.title}</Text>
-                    <View style={styles.footerRule} />
-                    <View style={styles.footerLinks}>
-                      {group.links.map((link) => (
-                        <Text key={link} style={styles.footerLink}>
-                          {link}
-                        </Text>
-                      ))}
+                <View style={[styles.footerGroups, isDesktop && styles.footerGroupsDesktop]}>
+                  {footerGroups.map((group) => (
+                    <View key={group.title} style={styles.footerGroup}>
+                      <Text style={styles.footerGroupTitle}>{group.title}</Text>
+                      <View style={styles.footerRule} />
+                      <View style={styles.footerLinks}>
+                        {group.links.map((link) => (
+                          <Text key={link} style={styles.footerLink}>
+                            {link}
+                          </Text>
+                        ))}
+                      </View>
                     </View>
-                  </View>
-                ))}
+                  ))}
+                </View>
               </View>
 
-              <Image
-                accessibilityLabel="Website, share, and video links"
-                contentFit="contain"
-                source={socialPlaceholder}
-                style={styles.socialLinks}
-              />
+              <View style={[styles.footerBottom, isDesktop && styles.footerBottomDesktop]}>
+                <Image
+                  accessibilityLabel="Website, share, and video links"
+                  contentFit="contain"
+                  source={socialPlaceholder}
+                  style={[styles.socialLinks, isDesktop && styles.socialLinksDesktop]}
+                />
 
-              <Text style={styles.copyright}>
-                © 2026 Kanyah, a MESRAC project. All rights reserved.
-              </Text>
+                <Text style={[styles.copyright, isDesktop && styles.copyrightDesktop]}>
+                  © 2026 Kanyah, a MESRAC project. All rights reserved.
+                </Text>
+              </View>
             </View>
           </View>
 
-          <PatternDivider />
+          <PatternDivider columns={patternColumns} />
         </ScrollView>
       </MobileFrame>
     </SafeAreaView>
@@ -417,13 +588,27 @@ const styles = StyleSheet.create({
   header: {
     minHeight: 100,
     position: 'relative',
-    overflow: 'hidden',
+    zIndex: 20,
+    backgroundColor: colors.warmHeader,
+  },
+  headerTablet: {
+    minHeight: 108,
+  },
+  headerInner: {
+    minHeight: 100,
+    width: '100%',
+    maxWidth: 1200,
+    zIndex: 1,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.warmHeader,
     paddingHorizontal: 18,
     paddingVertical: 8,
+  },
+  headerInnerTablet: {
+    minHeight: 108,
+    paddingHorizontal: 34,
   },
   textileBackground: {
     position: 'absolute',
@@ -432,6 +617,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: 'hidden',
+  },
+  textileBackgroundGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignContent: 'flex-start',
   },
   textileTile: {
     width: '100%',
@@ -443,6 +633,10 @@ const styles = StyleSheet.create({
     width: 142,
     height: 84,
     zIndex: 1,
+  },
+  logoTablet: {
+    width: 166,
+    height: 92,
   },
   menuButton: {
     width: 46,
@@ -462,6 +656,79 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.headline,
   },
+  desktopNavigation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 34,
+  },
+  desktopNavLink: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  desktopNavLinkText: {
+    color: colors.headline,
+    fontFamily: bodyFont,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.35,
+    lineHeight: 20,
+  },
+  desktopNavCta: {
+    minHeight: 52,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    backgroundColor: colors.orange,
+    paddingHorizontal: 27,
+    paddingVertical: 12,
+  },
+  desktopNavCtaText: {
+    color: colors.white,
+    fontFamily: displayFont,
+    fontSize: 18,
+    fontWeight: '900',
+    lineHeight: 22,
+  },
+  mobileMenu: {
+    width: 250,
+    position: 'absolute',
+    top: 88,
+    right: 16,
+    zIndex: 30,
+    overflow: 'hidden',
+    borderRadius: 18,
+    backgroundColor: colors.purpleFooter,
+    padding: 8,
+    shadowColor: colors.headline,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  mobileMenuTablet: {
+    top: 98,
+    right: 34,
+  },
+  mobileMenuItem: {
+    minHeight: 52,
+    justifyContent: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  mobileMenuItemPressed: {
+    backgroundColor: 'rgba(247, 201, 109, 0.16)',
+  },
+  mobileMenuItemText: {
+    color: '#F8EFF5',
+    fontFamily: bodyFont,
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    lineHeight: 20,
+  },
   buttonPressed: {
     opacity: 0.86,
     transform: [{ scale: 0.98 }],
@@ -478,6 +745,35 @@ const styles = StyleSheet.create({
     paddingTop: 72,
     paddingBottom: 70,
   },
+  heroContentTablet: {
+    paddingHorizontal: 40,
+    paddingTop: 82,
+    paddingBottom: 82,
+  },
+  heroContentDesktop: {
+    width: '100%',
+    maxWidth: 1200,
+    minHeight: 700,
+    zIndex: 1,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 68,
+    paddingHorizontal: 48,
+    paddingTop: 72,
+    paddingBottom: 72,
+  },
+  heroCopy: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  heroCopyDesktop: {
+    width: 'auto',
+    flex: 1.08,
+    minWidth: 0,
+    alignItems: 'flex-start',
+  },
   eyebrow: {
     color: colors.purple,
     fontFamily: bodyFont,
@@ -487,9 +783,17 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
+  eyebrowDesktop: {
+    fontSize: 16,
+    lineHeight: 22,
+    textAlign: 'left',
+  },
   headlineGroup: {
     width: '100%',
     marginTop: 27,
+  },
+  headlineGroupDesktop: {
+    marginTop: 24,
   },
   headline: {
     color: colors.headline,
@@ -499,6 +803,20 @@ const styles = StyleSheet.create({
     letterSpacing: -1.2,
     lineHeight: 49,
     textAlign: 'center',
+  },
+  headlineTablet: {
+    fontSize: 50,
+    lineHeight: 60,
+  },
+  headlineDesktop: {
+    fontSize: 66,
+    letterSpacing: -1.8,
+    lineHeight: 69,
+    textAlign: 'left',
+  },
+  headlineCompactDesktop: {
+    fontSize: 55,
+    lineHeight: 59,
   },
   headlineAccent: {
     color: colors.purple,
@@ -513,6 +831,18 @@ const styles = StyleSheet.create({
     lineHeight: 31,
     textAlign: 'center',
   },
+  supportingCopyTablet: {
+    maxWidth: 540,
+    fontSize: 22,
+    lineHeight: 34,
+  },
+  supportingCopyDesktop: {
+    maxWidth: 520,
+    marginTop: 28,
+    fontSize: 21,
+    lineHeight: 33,
+    textAlign: 'left',
+  },
   waitlistButton: {
     width: '100%',
     maxWidth: 420,
@@ -525,6 +855,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 16,
   },
+  waitlistButtonDesktop: {
+    width: 'auto',
+    minWidth: 282,
+    minHeight: 68,
+    alignSelf: 'flex-start',
+    marginTop: 38,
+    paddingHorizontal: 34,
+  },
   waitlistButtonText: {
     color: colors.white,
     fontFamily: displayFont,
@@ -534,6 +872,10 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     textAlign: 'center',
   },
+  waitlistButtonTextDesktop: {
+    fontSize: 27,
+    lineHeight: 32,
+  },
   jumaArtwork: {
     width: '100%',
     maxWidth: 420,
@@ -542,13 +884,24 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderRadius: 23,
   },
+  jumaArtworkTablet: {
+    maxWidth: 620,
+  },
+  jumaArtworkDesktop: {
+    flex: 0.92,
+    width: '48%',
+    maxWidth: 540,
+    marginTop: 0,
+    borderRadius: 30,
+  },
   patternDivider: {
     height: 15,
     overflow: 'hidden',
+    flexDirection: 'row',
     backgroundColor: colors.yellow,
   },
   patternDividerImage: {
-    width: '100%',
+    flex: 1,
     height: 44,
   },
   trustSection: {
@@ -557,6 +910,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingTop: 48,
     paddingBottom: 38,
+  },
+  trustContent: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  trustContentTablet: {
+    maxWidth: 1080,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 48,
+    paddingVertical: 8,
   },
   trustHeading: {
     width: '100%',
@@ -568,11 +932,24 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
+  trustHeadingTablet: {
+    width: 'auto',
+    flex: 1,
+    fontSize: 18,
+    lineHeight: 24,
+    textAlign: 'left',
+  },
   trustedByIcons: {
     width: '100%',
     maxWidth: 358,
     aspectRatio: 358 / 68,
     marginTop: 25,
+  },
+  trustedByIconsTablet: {
+    width: 'auto',
+    flex: 1,
+    maxWidth: 430,
+    marginTop: 0,
   },
   howItWorksSection: {
     alignItems: 'center',
@@ -580,6 +957,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingTop: 82,
     paddingBottom: 72,
+  },
+  howItWorksSectionTablet: {
+    paddingHorizontal: 34,
+    paddingTop: 104,
+    paddingBottom: 108,
   },
   howItWorksHeading: {
     color: colors.purple,
@@ -589,6 +971,10 @@ const styles = StyleSheet.create({
     letterSpacing: -1,
     lineHeight: 46,
     textAlign: 'center',
+  },
+  howItWorksHeadingTablet: {
+    fontSize: 50,
+    lineHeight: 58,
   },
   headingUnderline: {
     width: 116,
@@ -602,6 +988,13 @@ const styles = StyleSheet.create({
     maxWidth: 440,
     marginTop: 58,
     gap: 38,
+  },
+  cardsTablet: {
+    maxWidth: 1200,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 24,
+    marginTop: 68,
   },
   howItWorksCard: {
     minHeight: 370,
@@ -617,6 +1010,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.14,
     shadowRadius: 5,
     elevation: 4,
+  },
+  howItWorksCardTablet: {
+    width: '47%',
+    minHeight: 350,
+    flexGrow: 1,
+    paddingHorizontal: 32,
+  },
+  howItWorksCardDesktop: {
+    width: '31%',
+    maxWidth: 384,
+    minHeight: 410,
+    flexGrow: 1,
   },
   cardIcon: {
     width: 68,
@@ -657,11 +1062,35 @@ const styles = StyleSheet.create({
     paddingTop: 94,
     paddingBottom: 94,
   },
+  waitlistSectionDesktop: {
+    minHeight: 510,
+    justifyContent: 'center',
+    paddingHorizontal: 48,
+    paddingTop: 88,
+    paddingBottom: 88,
+  },
   waitlistContent: {
     width: '100%',
     maxWidth: 440,
     zIndex: 1,
     alignItems: 'center',
+  },
+  waitlistContentDesktop: {
+    maxWidth: 1200,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 74,
+  },
+  waitlistIntro: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  waitlistIntroDesktop: {
+    width: 'auto',
+    flex: 0.85,
+    minWidth: 0,
+    alignItems: 'flex-start',
   },
   waitlistHeading: {
     color: colors.white,
@@ -671,6 +1100,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.8,
     lineHeight: 47,
     textAlign: 'center',
+  },
+  waitlistHeadingDesktop: {
+    fontSize: 50,
+    lineHeight: 57,
+    textAlign: 'left',
   },
   waitlistCopy: {
     maxWidth: 420,
@@ -682,10 +1116,32 @@ const styles = StyleSheet.create({
     lineHeight: 32,
     textAlign: 'center',
   },
+  waitlistCopyDesktop: {
+    maxWidth: 480,
+    fontSize: 20,
+    lineHeight: 31,
+    textAlign: 'left',
+  },
   waitlistForm: {
     width: '100%',
     marginTop: 49,
     gap: 22,
+  },
+  waitlistFormDesktop: {
+    width: 'auto',
+    flex: 1.15,
+    maxWidth: 650,
+    marginTop: 0,
+    gap: 16,
+  },
+  waitlistFields: {
+    width: '100%',
+    gap: 22,
+  },
+  waitlistFieldsDesktop: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 14,
   },
   emailInput: {
     width: '100%',
@@ -701,6 +1157,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 20,
   },
+  emailInputDesktop: {
+    width: 'auto',
+    minWidth: 0,
+    flex: 1,
+    minHeight: 72,
+  },
   waitlistSubmitButton: {
     width: '100%',
     minHeight: 78,
@@ -710,6 +1172,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F7A521',
     paddingHorizontal: 24,
     paddingVertical: 18,
+  },
+  waitlistSubmitButtonDesktop: {
+    width: 242,
+    minHeight: 72,
+    flexShrink: 0,
+    paddingHorizontal: 18,
   },
   waitlistSubmitButtonSuccess: {
     backgroundColor: colors.green,
@@ -723,6 +1191,10 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     textAlign: 'center',
   },
+  waitlistSubmitTextDesktop: {
+    fontSize: 18,
+    lineHeight: 24,
+  },
   waitlistStatus: {
     color: '#EAF8EE',
     fontFamily: bodyFont,
@@ -730,6 +1202,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     lineHeight: 22,
     textAlign: 'center',
+  },
+  waitlistStatusDesktop: {
+    textAlign: 'left',
   },
   waitlistStatusError: {
     color: '#FFE0E4',
@@ -743,11 +1218,37 @@ const styles = StyleSheet.create({
     paddingTop: 82,
     paddingBottom: 54,
   },
+  footerDesktop: {
+    minHeight: 510,
+    paddingHorizontal: 48,
+    paddingTop: 88,
+    paddingBottom: 58,
+  },
   footerContent: {
     width: '100%',
     maxWidth: 440,
     zIndex: 1,
     alignSelf: 'center',
+  },
+  footerContentDesktop: {
+    maxWidth: 1200,
+  },
+  footerMain: {
+    width: '100%',
+  },
+  footerMainDesktop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 96,
+  },
+  footerBrand: {
+    width: '100%',
+  },
+  footerBrandDesktop: {
+    width: 'auto',
+    maxWidth: 460,
+    flex: 1,
   },
   footerLogo: {
     width: 150,
@@ -768,6 +1269,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 44,
     marginTop: 56,
+  },
+  footerGroupsDesktop: {
+    width: 'auto',
+    maxWidth: 500,
+    flex: 1,
+    gap: 70,
+    marginTop: 16,
   },
   footerGroup: {
     flex: 1,
@@ -804,6 +1312,20 @@ const styles = StyleSheet.create({
     aspectRatio: 358 / 40,
     marginTop: 60,
   },
+  footerBottom: {
+    width: '100%',
+  },
+  footerBottomDesktop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 48,
+    marginTop: 76,
+  },
+  socialLinksDesktop: {
+    width: 260,
+    marginTop: 0,
+  },
   copyright: {
     marginTop: 105,
     color: '#EADDE8',
@@ -812,5 +1334,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     lineHeight: 20,
     textAlign: 'center',
+  },
+  copyrightDesktop: {
+    marginTop: 0,
+    textAlign: 'right',
   },
 })

@@ -5,11 +5,12 @@ type MobileFrameProps = {
   backgroundColor: string
   children: ReactNode
   frameColor: string
+  responsive?: boolean
 }
 
-export function MobileFrame({ backgroundColor, children, frameColor }: MobileFrameProps) {
+export function MobileFrame({ backgroundColor, children, frameColor, responsive = false }: MobileFrameProps) {
   const { width } = useWindowDimensions()
-  const shouldFrame = width >= 768
+  const shouldFrame = !responsive && width >= 768
 
   return (
     <View
