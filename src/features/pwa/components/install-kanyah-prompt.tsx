@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { useInstallPrompt } from '@/features/pwa/hooks/use-install-prompt'
@@ -12,6 +13,16 @@ const colors = {
 
 export function InstallKanyahPrompt() {
   const { canPromptInstall, dismiss, isIos, isVisible, promptInstall } = useInstallPrompt()
+  const [hasCopiedLink, setHasCopiedLink] = useState(false)
+
+  async function copyLink() {
+    if (typeof window === 'undefined' || !window.navigator.clipboard) {
+      return
+    }
+
+    await window.navigator.clipboard.writeText(window.location.href)
+    setHasCopiedLink(true)
+  }
 
   if (!isVisible) {
     return null
@@ -19,18 +30,26 @@ export function InstallKanyahPrompt() {
 
   return (
     <View pointerEvents="box-none" style={styles.shell}>
-      <View style={styles.prompt}>
+      <View style={[styles.prompt, isIos && styles.iosPrompt]}>
         <View style={styles.copy}>
           <Text style={styles.title}>Install Kanyah</Text>
           <Text style={styles.text}>
-            {isIos && !canPromptInstall ? 'Share, then Add to Home Screen.' : 'Open it like an app.'}
+            {isIos && !canPromptInstall
+              ? 'Open this page in Safari, then tap Share and Add to Home Screen.'
+              : 'Open it like an app.'}
           </Text>
         </View>
 
-        <View style={styles.actions}>
+        <View style={[styles.actions, isIos && styles.iosActions]}>
           {canPromptInstall ? (
             <Pressable accessibilityRole="button" onPress={promptInstall} style={styles.installButton}>
               <Text style={styles.installButtonText}>Install</Text>
+            </Pressable>
+          ) : null}
+
+          {isIos ? (
+            <Pressable accessibilityRole="button" onPress={copyLink} style={styles.copyButton}>
+              <Text style={styles.copyButtonText}>{hasCopiedLink ? 'Copied' : 'Copy link'}</Text>
             </Pressable>
           ) : null}
 
@@ -70,6 +89,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.22,
     shadowRadius: 14,
   },
+  iosPrompt: {
+    alignItems: 'stretch',
+    flexDirection: 'column',
+  },
   copy: {
     flex: 1,
     minWidth: 0,
@@ -94,6 +117,9 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 8,
   },
+  iosActions: {
+    justifyContent: 'flex-end',
+  },
   installButton: {
     borderRadius: 999,
     backgroundColor: colors.marigold,
@@ -101,6 +127,18 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   installButtonText: {
+    color: colors.charcoal,
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 15,
+  },
+  copyButton: {
+    borderRadius: 999,
+    backgroundColor: colors.marigold,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  copyButtonText: {
     color: colors.charcoal,
     fontSize: 13,
     fontWeight: '900',
