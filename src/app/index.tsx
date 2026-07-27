@@ -14,6 +14,7 @@ import {
 } from 'react-native'
 
 import { MobileFrame } from '@/components/mobile-frame'
+import { InstallKanyahPrompt } from '@/features/pwa/components/install-kanyah-prompt'
 import { joinWaitlist } from '@/features/waitlist/api/waitlist'
 
 const colors = {
@@ -574,6 +575,7 @@ export default function HomeScreen() {
 
           <PatternDivider columns={patternColumns} />
         </ScrollView>
+        <InstallKanyahPrompt />
       </MobileFrame>
     </SafeAreaView>
   )
