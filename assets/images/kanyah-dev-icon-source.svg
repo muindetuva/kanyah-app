@@ -1,0 +1,17 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#F7F3EA" />
+  <svg x="276" y="116" width="472" height="678" viewBox="0 7 38 55" preserveAspectRatio="xMidYMid meet">
+    <image href="./kanyah-logo.svg" width="120" height="84" />
+  </svg>
+  <rect x="337" y="778" width="350" height="120" rx="60" fill="#39205B" stroke="#F16022" stroke-width="10" />
+  <text
+    x="512"
+    y="860"
+    fill="#FFFFFF"
+    font-family="Arial, Helvetica, sans-serif"
+    font-size="64"
+    font-weight="900"
+    letter-spacing="8"
+    text-anchor="middle"
+  >DEV</text>
+</svg>
