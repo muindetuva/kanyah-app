@@ -2,6 +2,7 @@
   "background_color": "#272827",
   "description": "Development build of Kanyah.",
   "display": "standalone",
+  "id": "/",
   "icons": [
     {
       "purpose": "any maskable",

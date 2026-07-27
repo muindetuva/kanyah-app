@@ -2,6 +2,7 @@
   "background_color": "#F7F3EA",
   "description": "Mobile-first storytelling for children, set up and guided by parents.",
   "display": "standalone",
+  "id": "/",
   "icons": [
     {
       "purpose": "any maskable",
