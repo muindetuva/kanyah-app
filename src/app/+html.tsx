@@ -2,10 +2,10 @@ import { ScrollViewStyleReset } from 'expo-router/html'
 import type { PropsWithChildren } from 'react'
 
 export default function Root({ children }: PropsWithChildren) {
-  const isProd = process.env.APP_ENV === 'production'
-  const manifestHref = isProd ? '/manifest-prod.json' : '/manifest-dev.json'
-  const themeColor = isProd ? '#39205B' : '#F16022'
-  const touchIconHref = isProd ? '/pwa-prod-icon-192.png' : '/pwa-dev-icon-192.png'
+  const isDevelopment = process.env.APP_ENV === 'development'
+  const manifestHref = isDevelopment ? '/manifest-dev.json' : '/manifest-prod.json'
+  const themeColor = isDevelopment ? '#F16022' : '#39205B'
+  const touchIconHref = isDevelopment ? '/pwa-dev-icon-192.png' : '/pwa-prod-icon-192.png'
 
   return (
     <html lang="en">
