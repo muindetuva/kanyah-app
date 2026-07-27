@@ -199,6 +199,12 @@ export default function HomeScreen() {
           showsVerticalScrollIndicator={false}
           style={styles.scrollView}
         >
+          <View style={[styles.devBanner, isTablet && styles.devBannerTablet]}>
+            <Text accessibilityRole="header" style={[styles.devBannerText, isTablet && styles.devBannerTextTablet]}>
+              Dev version of Kanyah
+            </Text>
+          </View>
+
           <View style={[styles.header, isTablet && styles.headerTablet]}>
             <TextileBackground columns={patternColumns} count={1} opacity={0.22} />
 
@@ -584,6 +590,31 @@ const styles = StyleSheet.create({
   },
   page: {
     flexGrow: 1,
+  },
+  devBanner: {
+    minHeight: 150,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 32,
+    backgroundColor: colors.white,
+  },
+  devBannerTablet: {
+    minHeight: 200,
+    paddingHorizontal: 48,
+    paddingVertical: 44,
+  },
+  devBannerText: {
+    color: colors.headline,
+    fontFamily: displayFont,
+    fontSize: 38,
+    fontWeight: '900',
+    lineHeight: 44,
+    textAlign: 'center',
+  },
+  devBannerTextTablet: {
+    fontSize: 60,
+    lineHeight: 68,
   },
   header: {
     minHeight: 100,
