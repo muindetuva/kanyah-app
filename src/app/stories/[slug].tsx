@@ -1,269 +1,270 @@
 import { router, useLocalSearchParams } from 'expo-router'
+import { SymbolView } from 'expo-symbols'
 import { useState } from 'react'
-import {
-  FlatList,
-  NativeScrollEvent,
-  NativeSyntheticEvent,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native'
+import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { MobileFrame } from '@/components/mobile-frame'
+import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
+import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { getLocalStory } from '@/features/stories/data/local-stories'
+import { appColors, appPalette } from '@/theme/colors'
+import { appTypography } from '@/theme/typography'
 
-const colors = {
-  marigold: '#EF9E23',
-  orange: '#F16022',
-  blue: '#2671B8',
-  magenta: '#D63575',
-  purple: '#70439A',
-  indigo: '#39205B',
-  offWhite: '#F0EFEF',
-  charcoal: '#272827',
-  green: '#127D3E',
-}
-
-function StoryPage({
-  card,
-  height,
-  index,
-  total,
-}: {
-  card: string
-  height: number
-  index: number
-  total: number
-}) {
-  return (
-    <View style={[styles.page, { height }]}>
-      <View style={styles.storyCard}>
-        <Text style={styles.position}>
-          {index + 1} / {total}
-        </Text>
-        <Text style={styles.cardText}>{card}</Text>
-      </View>
-    </View>
-  )
-}
-
-export default function StoryReaderScreen() {
-  const { height } = useWindowDimensions()
+export default function StorySummaryScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
-  const [currentIndex, setCurrentIndex] = useState(0)
-  const data = getLocalStory(slug ?? '')
+  const story = getLocalStory(slug ?? '')
+  const [favorite, setFavorite] = useState(false)
 
-  function handleMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
-    const nextIndex = Math.round(event.nativeEvent.contentOffset.y / readerPageHeight)
-    setCurrentIndex(nextIndex)
-  }
-
-  if (!data) {
+  if (!story) {
     return (
-      <SafeAreaView style={styles.stateScreen}>
-        <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-          <View style={styles.stateContent}>
-            <Text style={styles.stateTitle}>This story slipped away.</Text>
-            <Text style={styles.stateText}>This story is not in the local library yet.</Text>
-            <View style={styles.stateActions}>
-              <Pressable onPress={() => router.replace('/stories')} style={styles.secondaryButton}>
-                <Text style={styles.secondaryButtonText}>Back</Text>
-              </Pressable>
-            </View>
-          </View>
-        </MobileFrame>
-      </SafeAreaView>
+      <ChildAppShell activeTab="stories">
+        <View style={styles.missingState}>
+          <Text style={styles.missingTitle}>STORY NOT FOUND</Text>
+          <Text style={styles.missingText}>This story is not in the local library yet.</Text>
+          <Pressable onPress={() => router.replace('/stories')} style={styles.returnButton}>
+            <Text style={styles.returnButtonText}>BACK TO STORIES</Text>
+          </Pressable>
+        </View>
+      </ChildAppShell>
     )
   }
 
-  const readerPageHeight = Math.max(height - 232, 420)
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.indigo}>
-        <View style={styles.header}>
-          <Pressable onPress={() => router.replace('/stories')} style={styles.backButton}>
-            <Text style={styles.backButtonText}>Back</Text>
+    <ChildAppShell activeTab="stories">
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <StoryArtwork artwork={story.artwork} style={styles.heroArtwork} />
+          <Pressable
+            accessibilityLabel="Back to story library"
+            accessibilityRole="button"
+            onPress={() => router.replace('/stories')}
+            style={({ pressed }) => [styles.roundButton, styles.backButton, pressed && styles.pressed]}
+          >
+            <SymbolView
+              name={{ ios: 'chevron.left', android: 'chevron_left', web: 'chevron_left' }}
+              size={27}
+              tintColor={appPalette.colors.brown[500]}
+            />
           </Pressable>
-          <Text style={styles.counter}>
-            {currentIndex + 1} of {data.cards.length}
-          </Text>
         </View>
 
-        <View style={styles.titleBlock}>
-          <Text style={styles.category}>
-            {data.category}
-          </Text>
-          <Text style={styles.title}>{data.title}</Text>
-        </View>
+        <View style={styles.details}>
+          <View style={styles.titleRow}>
+            <Text style={styles.title}>{story.title.toUpperCase()}</Text>
+            <Pressable
+              accessibilityLabel={favorite ? 'Remove story from favorites' : 'Add story to favorites'}
+              accessibilityRole="button"
+              accessibilityState={{ selected: favorite }}
+              onPress={() => setFavorite((current) => !current)}
+              style={({ pressed }) => [styles.favoriteButton, pressed && styles.pressed]}
+            >
+              <SymbolView
+                name={
+                  favorite
+                    ? { ios: 'heart.fill', android: 'favorite', web: 'favorite' }
+                    : { ios: 'heart', android: 'favorite_border', web: 'favorite_border' }
+                }
+                size={25}
+                tintColor={
+                  favorite ? appPalette.colors.magenta[300] : appPalette.colors.brown[500]
+                }
+              />
+            </Pressable>
+          </View>
 
-        <FlatList
-          data={data.cards}
-          getItemLayout={(_items, index) => ({
-            index,
-            length: readerPageHeight,
-            offset: readerPageHeight * index,
-          })}
-          keyExtractor={(_card, index) => `${data.slug}-${index}`}
-          onMomentumScrollEnd={handleMomentumScrollEnd}
-          pagingEnabled
-          renderItem={({ index, item }) => (
-            <StoryPage card={item} height={readerPageHeight} index={index} total={data.cards.length} />
-          )}
-          showsVerticalScrollIndicator={false}
-        />
-      </MobileFrame>
-    </SafeAreaView>
+          <View style={styles.metadata}>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{story.category}</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>Ages 6-8</Text>
+            </View>
+            <View style={styles.pill}>
+              <Text style={styles.pillText}>{story.cards.length} Chapters</Text>
+            </View>
+          </View>
+
+          <View style={styles.summaryCard}>
+            <Text accessibilityElementsHidden style={styles.quoteMark}>
+              ”
+            </Text>
+            <Text style={styles.summary}>{story.summary}</Text>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/stories/[slug]/read',
+                params: { slug: story.slug },
+              })
+            }
+            style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
+          >
+            <Text style={styles.startButtonText}>START READING</Text>
+            <SymbolView
+              name={{ ios: 'book.closed', android: 'menu_book', web: 'menu_book' }}
+              size={20}
+              tintColor={appColors.text.onPrimary}
+            />
+          </Pressable>
+        </View>
+      </ScrollView>
+    </ChildAppShell>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.charcoal,
+  scrollContent: {
+    paddingBottom: 122,
   },
-  header: {
-    flexDirection: 'row',
+  hero: {
+    position: 'relative',
+    height: 330,
+    overflow: 'hidden',
+    borderBottomLeftRadius: 34,
+    borderBottomRightRadius: 34,
+  },
+  heroArtwork: {
+    width: '100%',
+    height: '100%',
+  },
+  roundButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 8,
+    justifyContent: 'center',
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.82)',
   },
   backButton: {
-    borderRadius: 999,
-    backgroundColor: colors.offWhite,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    position: 'absolute',
+    top: 14,
+    left: 14,
   },
-  backButtonText: {
-    color: colors.indigo,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 17,
-  },
-  counter: {
-    color: colors.offWhite,
-    fontSize: 15,
-    fontWeight: '900',
-    lineHeight: 17,
-  },
-  titleBlock: {
-    gap: 10,
+  details: {
     paddingHorizontal: 18,
-    paddingTop: 12,
-    paddingBottom: 18,
+    paddingTop: 20,
   },
-  category: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    backgroundColor: colors.magenta,
-    color: colors.offWhite,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    fontSize: 12,
-    fontWeight: '900',
-    lineHeight: 15,
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   title: {
-    color: colors.offWhite,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 38,
-  },
-  page: {
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 16,
-  },
-  storyCard: {
-    minHeight: 320,
-    maxHeight: 520,
-    width: '100%',
-    maxWidth: 680,
-    alignSelf: 'center',
-    justifyContent: 'space-between',
-    borderRadius: 28,
-    borderWidth: 4,
-    borderColor: colors.charcoal,
-    backgroundColor: colors.offWhite,
-    padding: 26,
-  },
-  position: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    backgroundColor: colors.marigold,
-    color: colors.charcoal,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    fontSize: 13,
-    fontWeight: '900',
-    lineHeight: 16,
-  },
-  cardText: {
-    color: colors.charcoal,
-    fontSize: 32,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 40,
-  },
-  stateScreen: {
     flex: 1,
-    backgroundColor: colors.charcoal,
-  },
-  stateContent: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 14,
-    backgroundColor: colors.offWhite,
-    paddingHorizontal: 24,
-  },
-  stateTitle: {
-    color: colors.indigo,
-    fontSize: 34,
+    color: appPalette.colors.neutral[1000],
+    fontFamily: appTypography.displayFont,
+    fontSize: 31,
     fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 38,
+    lineHeight: 37,
   },
-  stateText: {
-    color: colors.charcoal,
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 25,
+  favoriteButton: {
+    width: 46,
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 23,
+    backgroundColor: appPalette.grays.white,
   },
-  stateActions: {
+  metadata: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
+    marginTop: 15,
   },
-  primaryButton: {
-    borderRadius: 999,
-    backgroundColor: colors.indigo,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+  pill: {
+    borderRadius: 16,
+    backgroundColor: appPalette.colors.purple[100],
+    paddingHorizontal: 13,
+    paddingVertical: 7,
   },
-  primaryButtonText: {
-    color: colors.offWhite,
+  pillText: {
+    color: appColors.text.primary,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 15,
+  },
+  summaryCard: {
+    position: 'relative',
+    minHeight: 126,
+    justifyContent: 'center',
+    marginTop: 22,
+    borderRadius: 20,
+    backgroundColor: appPalette.grays.white,
+    paddingHorizontal: 20,
+    paddingVertical: 24,
+  },
+  quoteMark: {
+    position: 'absolute',
+    top: -13,
+    left: 2,
+    color: appPalette.colors.neutral[300],
+    fontFamily: appTypography.displayFont,
+    fontSize: 58,
+    lineHeight: 64,
+  },
+  summary: {
+    color: appPalette.colors.neutral[700],
     fontSize: 16,
-    fontWeight: '900',
+    lineHeight: 24,
+  },
+  startButton: {
+    height: 58,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    marginTop: 30,
+    borderRadius: 29,
+    backgroundColor: appColors.actions.primary,
+    boxShadow: '0 7px 16px rgba(90, 52, 28, 0.18)',
+  },
+  startButtonPressed: {
+    opacity: 0.84,
+    transform: [{ scale: 0.99 }],
+  },
+  startButtonText: {
+    color: appColors.text.onPrimary,
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.2,
     lineHeight: 18,
   },
-  secondaryButton: {
-    borderWidth: 2,
-    borderColor: colors.indigo,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+  missingState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    gap: 12,
+    paddingHorizontal: 24,
   },
-  secondaryButtonText: {
-    color: colors.indigo,
+  missingTitle: {
+    color: appColors.text.primary,
+    fontFamily: appTypography.displayFont,
+    fontSize: 30,
+    lineHeight: 36,
+  },
+  missingText: {
+    color: appPalette.colors.neutral[700],
     fontSize: 16,
-    fontWeight: '900',
-    lineHeight: 18,
+    lineHeight: 23,
+  },
+  returnButton: {
+    borderRadius: 24,
+    backgroundColor: appColors.actions.primary,
+    paddingHorizontal: 18,
+    paddingVertical: 13,
+  },
+  returnButtonText: {
+    color: appColors.text.onPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  pressed: {
+    opacity: 0.72,
   },
 })
