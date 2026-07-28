@@ -92,7 +92,13 @@ export default function SignUpScreen() {
           </Text>
         </Pressable>
 
-        <AuthPrimaryButton label="CREATE ACCOUNT" onPress={Keyboard.dismiss} />
+        <AuthPrimaryButton
+          label="CREATE ACCOUNT"
+          onPress={() => {
+            Keyboard.dismiss()
+            router.push('/create-profile')
+          }}
+        />
 
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>Already have an account? </Text>

@@ -1,8 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { router, useLocalSearchParams } from 'expo-router'
 import { useState } from 'react'
 import {
-  ActivityIndicator,
   FlatList,
   NativeScrollEvent,
   NativeSyntheticEvent,
@@ -15,7 +13,7 @@ import {
 } from 'react-native'
 
 import { MobileFrame } from '@/components/mobile-frame'
-import { type StoryCard, getStoryBySlug } from '@/features/stories/api/stories'
+import { getLocalStory } from '@/features/stories/data/local-stories'
 
 const colors = {
   marigold: '#EF9E23',
@@ -35,7 +33,7 @@ function StoryPage({
   index,
   total,
 }: {
-  card: StoryCard
+  card: string
   height: number
   index: number
   total: number
@@ -46,7 +44,7 @@ function StoryPage({
         <Text style={styles.position}>
           {index + 1} / {total}
         </Text>
-        <Text style={styles.cardText}>{card.content}</Text>
+        <Text style={styles.cardText}>{card}</Text>
       </View>
     </View>
   )
@@ -57,45 +55,23 @@ export default function StoryReaderScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
   const [currentIndex, setCurrentIndex] = useState(0)
-
-  const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['story', slug],
-    queryFn: () => getStoryBySlug(slug ?? ''),
-    enabled: Boolean(slug),
-  })
+  const data = getLocalStory(slug ?? '')
 
   function handleMomentumScrollEnd(event: NativeSyntheticEvent<NativeScrollEvent>) {
     const nextIndex = Math.round(event.nativeEvent.contentOffset.y / readerPageHeight)
     setCurrentIndex(nextIndex)
   }
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.stateScreen}>
-        <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-          <View style={styles.stateContent}>
-            <ActivityIndicator color={colors.indigo} size="large" />
-          </View>
-        </MobileFrame>
-      </SafeAreaView>
-    )
-  }
-
-  if (error || !data) {
+  if (!data) {
     return (
       <SafeAreaView style={styles.stateScreen}>
         <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
           <View style={styles.stateContent}>
             <Text style={styles.stateTitle}>This story slipped away.</Text>
-            <Text style={styles.stateText}>
-              {error instanceof Error ? error.message : 'Failed to load this story.'}
-            </Text>
+            <Text style={styles.stateText}>This story is not in the local library yet.</Text>
             <View style={styles.stateActions}>
               <Pressable onPress={() => router.replace('/stories')} style={styles.secondaryButton}>
                 <Text style={styles.secondaryButtonText}>Back</Text>
-              </Pressable>
-              <Pressable onPress={() => refetch()} style={styles.primaryButton}>
-                <Text style={styles.primaryButtonText}>Try again</Text>
               </Pressable>
             </View>
           </View>
@@ -120,7 +96,7 @@ export default function StoryReaderScreen() {
 
         <View style={styles.titleBlock}>
           <Text style={styles.category}>
-            {data.categories.map((category) => category.name).join(' / ') || 'Story'}
+            {data.category}
           </Text>
           <Text style={styles.title}>{data.title}</Text>
         </View>
@@ -132,7 +108,7 @@ export default function StoryReaderScreen() {
             length: readerPageHeight,
             offset: readerPageHeight * index,
           })}
-          keyExtractor={(card) => String(card.id)}
+          keyExtractor={(_card, index) => `${data.slug}-${index}`}
           onMomentumScrollEnd={handleMomentumScrollEnd}
           pagingEnabled
           renderItem={({ index, item }) => (

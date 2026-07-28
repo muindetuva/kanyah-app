@@ -1,355 +1,354 @@
-import { useQuery } from '@tanstack/react-query'
 import { router } from 'expo-router'
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-  useWindowDimensions,
-} from 'react-native'
+import { SymbolView } from 'expo-symbols'
+import { useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { MobileFrame } from '@/components/mobile-frame'
-import { type FeedStory, getStoriesFeed } from '@/features/stories/api/stories'
-import { InstallKanyahPrompt } from '@/features/pwa/components/install-kanyah-prompt'
+import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
+import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import { StoryArtwork } from '@/features/stories/components/story-artwork'
+import { type LocalStory, localStories } from '@/features/stories/data/local-stories'
+import { appColors, appPalette } from '@/theme/colors'
+import { appTypography } from '@/theme/typography'
 
-const colors = {
-  marigold: '#EF9E23',
-  orange: '#F16022',
-  blue: '#2671B8',
-  magenta: '#D63575',
-  purple: '#70439A',
-  indigo: '#39205B',
-  offWhite: '#F0EFEF',
-  charcoal: '#272827',
-  green: '#127D3E',
-}
+const categories = ['Folklore', 'Adventure', 'Mystery', 'Fairy Tales'] as const
 
-function FeedHeader() {
+function LibraryHeader() {
   return (
-    <View style={styles.feedHeader}>
-      <View style={styles.feedHeaderCopy}>
-        <Text style={styles.feedBrand}>Kanyah</Text>
-        <Text style={styles.feedHint}>Swipe for stories. Tap to read.</Text>
-      </View>
-
-      <Pressable accessibilityLabel="Parent profile, coming soon" accessibilityRole="button" style={styles.profileButton}>
-        <Text style={styles.profileInitial}>P</Text>
-      </Pressable>
-    </View>
-  )
-}
-
-function StoryPreview({ height, story }: { height: number; story: FeedStory }) {
-  const categoryNames = story.categories.map((category) => category.name).join(' / ')
-
-  return (
-    <View style={[styles.slide, { minHeight: height }]}>
+    <View style={styles.header}>
       <Pressable
+        accessibilityLabel="Menu, coming soon"
         accessibilityRole="button"
-        onPress={() => {
-          router.push({
-            pathname: '/stories/[slug]',
-            params: {
-              slug: story.slug,
-            },
-          })
-        }}
-        style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+        accessibilityState={{ disabled: true }}
+        disabled
+        style={styles.menuButton}
       >
-        <View style={styles.cardTop}>
-          <Text style={styles.brand}>KANYAH</Text>
-          <Text style={styles.ageRange}>
-            Ages {story.minimumAge}-{story.maximumAge}
-          </Text>
-        </View>
+        <View style={styles.menuLine} />
+        <View style={styles.menuLine} />
+        <View style={styles.menuLine} />
+      </Pressable>
 
-        <View style={styles.cardBody}>
-          <Text style={styles.categories}>{categoryNames || 'Story'}</Text>
-          <Text style={styles.title}>{story.title}</Text>
-          <Text style={styles.summary}>{story.summary}</Text>
-        </View>
+      <Text accessibilityRole="header" numberOfLines={1} style={styles.pageTitle}>
+        STORY LIBRARY
+      </Text>
 
-        <View style={styles.cardBottom}>
-          <Text style={styles.openLabel}>Read story</Text>
-          <View style={styles.colorStack} accessibilityElementsHidden>
-            <View style={[styles.colorBlock, styles.marigold]} />
-            <View style={[styles.colorBlock, styles.magenta]} />
-            <View style={[styles.colorBlock, styles.blue]} />
-          </View>
-        </View>
+      <Pressable
+        accessibilityLabel="Switch profile"
+        accessibilityRole="button"
+        hitSlop={8}
+        onPress={() => router.push('/who-is-reading')}
+        style={({ pressed }) => pressed && styles.pressed}
+      >
+        <ProfileAvatar avatar="paw" size={44} />
       </Pressable>
     </View>
   )
 }
 
-export default function HomeScreen() {
-  const { height } = useWindowDimensions()
-  const { data, error, isLoading, refetch } = useQuery({
-    queryKey: ['stories-feed'],
-    queryFn: getStoriesFeed,
-  })
+function StoryCard({ story }: { story: LocalStory }) {
+  return (
+    <Pressable
+      accessibilityLabel={`Read ${story.title}`}
+      accessibilityRole="button"
+      onPress={() =>
+        router.push({ pathname: '/stories/[slug]', params: { slug: story.slug } })
+      }
+      style={({ pressed }) => [styles.storyCard, pressed && styles.cardPressed]}
+    >
+      <View style={styles.artworkFrame}>
+        <StoryArtwork artwork={story.artwork} style={styles.artwork} />
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryBadgeText}>{story.category.toUpperCase()}</Text>
+        </View>
+      </View>
+      <View style={styles.storyCopy}>
+        <Text style={styles.storyTitle}>{story.title.toUpperCase()}</Text>
+        <Text style={styles.storySummary}>{story.summary}</Text>
+      </View>
+    </Pressable>
+  )
+}
 
-  const stories = data?.docs ?? []
-  const headerHeight = 84
-  const slideHeight = Math.max(height - headerHeight - 48, 520)
+export default function StoryLibraryScreen() {
+  const [highlightedCategory, setHighlightedCategory] = useState<string>('Folklore')
+  const [search, setSearch] = useState('')
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-          <View style={styles.stateScreen}>
-            <ActivityIndicator color={colors.indigo} size="large" />
-          </View>
-        </MobileFrame>
-      </SafeAreaView>
+  const visibleStories = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase()
+
+    if (!query) {
+      return localStories
+    }
+
+    return localStories.filter((story) =>
+      `${story.title} ${story.summary} ${story.category}`.toLocaleLowerCase().includes(query),
     )
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-          <View style={styles.stateScreen}>
-            <Text style={styles.stateTitle}>Stories are taking a minute.</Text>
-            <Text style={styles.stateText}>
-              {error instanceof Error ? error.message : 'Failed to load stories.'}
-            </Text>
-            <Pressable onPress={() => refetch()} style={styles.stateButton}>
-              <Text style={styles.stateButtonText}>Try again</Text>
-            </Pressable>
-          </View>
-        </MobileFrame>
-      </SafeAreaView>
-    )
-  }
-
-  if (stories.length === 0) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-          <View style={styles.stateScreen}>
-            <Text style={styles.stateTitle}>Kanyah is warming up.</Text>
-            <Text style={styles.stateText}>Published stories will appear here.</Text>
-          </View>
-        </MobileFrame>
-      </SafeAreaView>
-    )
-  }
+  }, [search])
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <MobileFrame backgroundColor={colors.charcoal} frameColor={colors.offWhite}>
-        <View style={styles.feedShell}>
-          <FeedHeader />
-          <FlatList
-            data={stories}
-            keyExtractor={(story) => story.slug}
-            pagingEnabled
-            renderItem={({ item }) => <StoryPreview height={slideHeight} story={item} />}
-            showsVerticalScrollIndicator={false}
-            snapToAlignment="start"
-          />
-          <InstallKanyahPrompt />
+    <ChildAppShell activeTab="stories">
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <LibraryHeader />
+
+        <ScrollView
+          contentContainerStyle={styles.categoryList}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+        >
+          {categories.map((category) => {
+            const highlighted = category === highlightedCategory
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ selected: highlighted }}
+                key={category}
+                onPress={() => setHighlightedCategory(category)}
+                style={({ pressed }) => [
+                  styles.categoryChip,
+                  highlighted && styles.categoryChipHighlighted,
+                  pressed && styles.pressed,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.categoryChipText,
+                    highlighted && styles.categoryChipTextHighlighted,
+                  ]}
+                >
+                  {category}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+
+        <View style={styles.searchRow}>
+          <View style={styles.searchField}>
+            <SymbolView
+              name={{ ios: 'magnifyingglass', android: 'search', web: 'search' }}
+              size={23}
+              tintColor={appPalette.colors.brown[500]}
+            />
+            <TextInput
+              accessibilityLabel="Search for a story"
+              autoCapitalize="none"
+              onChangeText={setSearch}
+              placeholder="Search for story"
+              placeholderTextColor={appPalette.colors.neutral[500]}
+              returnKeyType="search"
+              style={styles.searchInput}
+              value={search}
+            />
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            hitSlop={8}
+            onPress={() => {
+              setHighlightedCategory('Folklore')
+              setSearch('')
+            }}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text style={styles.allCategories}>All Categories</Text>
+          </Pressable>
         </View>
-      </MobileFrame>
-    </SafeAreaView>
+
+        <View style={styles.storyList}>
+          {visibleStories.map((story) => (
+            <StoryCard key={story.slug} story={story} />
+          ))}
+
+          {visibleStories.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>NO STORY FOUND</Text>
+              <Text style={styles.emptyText}>Try another title or category.</Text>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+    </ChildAppShell>
   )
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.charcoal,
+  scrollContent: {
+    paddingBottom: 124,
   },
-  feedShell: {
-    flex: 1,
-    position: 'relative',
-    backgroundColor: colors.offWhite,
-  },
-  feedHeader: {
-    minHeight: 84,
+  header: {
+    minHeight: 66,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 14,
-    borderBottomWidth: 3,
-    borderBottomColor: colors.charcoal,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
-  feedHeaderCopy: {
+  menuButton: {
+    width: 42,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.78)',
+  },
+  menuLine: {
+    width: 17,
+    height: 2,
+    borderRadius: 1,
+    backgroundColor: appPalette.colors.brown[500],
+  },
+  pageTitle: {
     flex: 1,
-    minWidth: 0,
-    gap: 2,
-  },
-  feedBrand: {
-    color: colors.indigo,
-    fontSize: 28,
+    color: appColors.text.primary,
+    fontFamily: appTypography.displayFont,
+    fontSize: 26,
     fontWeight: '900',
-    letterSpacing: 0,
     lineHeight: 31,
+    textAlign: 'center',
   },
-  feedHint: {
-    color: colors.charcoal,
+  categoryList: {
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
+  },
+  categoryChip: {
+    minWidth: 104,
+    height: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: appPalette.colors.brown[300],
+    borderRadius: 21,
+    backgroundColor: 'rgba(255, 255, 255, 0.76)',
+    paddingHorizontal: 18,
+  },
+  categoryChipHighlighted: {
+    borderColor: appColors.actions.primary,
+    backgroundColor: appColors.actions.primary,
+  },
+  categoryChipText: {
+    color: appPalette.colors.neutral[1000],
     fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
+  },
+  categoryChipTextHighlighted: {
+    color: appColors.text.onPrimary,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingTop: 2,
+    paddingBottom: 22,
+  },
+  searchField: {
+    height: 50,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+    borderRadius: 25,
+    backgroundColor: appPalette.grays.white,
+    paddingHorizontal: 16,
+  },
+  searchInput: {
+    height: '100%',
+    flex: 1,
+    color: appPalette.colors.neutral[1000],
+    fontSize: 16,
+    lineHeight: 20,
+  },
+  allCategories: {
+    color: appColors.actions.secondary,
+    fontSize: 13,
     fontWeight: '800',
     lineHeight: 18,
   },
-  profileButton: {
-    width: 46,
-    height: 46,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    borderWidth: 3,
-    borderColor: colors.charcoal,
-    borderRadius: 999,
-    backgroundColor: colors.indigo,
+  storyList: {
+    gap: 18,
+    paddingHorizontal: 16,
   },
-  profileInitial: {
-    color: colors.offWhite,
-    fontSize: 18,
-    fontWeight: '900',
-    lineHeight: 21,
-  },
-  slide: {
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 24,
-  },
-  card: {
-    flex: 1,
-    maxWidth: 760,
-    width: '100%',
-    alignSelf: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 4,
-    borderColor: colors.charcoal,
-    borderRadius: 28,
-    backgroundColor: colors.marigold,
-    padding: 24,
+  storyCard: {
+    overflow: 'hidden',
+    borderRadius: 20,
+    backgroundColor: appPalette.grays.white,
+    boxShadow: '0 6px 14px rgba(90, 52, 28, 0.16)',
   },
   cardPressed: {
-    transform: [{ scale: 0.99 }],
+    opacity: 0.86,
+    transform: [{ scale: 0.992 }],
   },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 14,
+  artworkFrame: {
+    position: 'relative',
+    height: 238,
+    overflow: 'hidden',
   },
-  brand: {
-    color: colors.indigo,
-    fontSize: 28,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 32,
+  artwork: {
+    width: '100%',
+    height: '100%',
   },
-  ageRange: {
-    flexShrink: 0,
-    borderRadius: 999,
-    backgroundColor: colors.offWhite,
-    color: colors.charcoal,
-    paddingHorizontal: 12,
+  categoryBadge: {
+    position: 'absolute',
+    top: 16,
+    left: 16,
+    borderRadius: 18,
+    backgroundColor: appPalette.colors.brown[300],
+    paddingHorizontal: 14,
     paddingVertical: 7,
-    fontSize: 13,
+  },
+  categoryBadgeText: {
+    color: appColors.text.onPrimary,
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
+    lineHeight: 15,
+  },
+  storyCopy: {
+    gap: 6,
+    paddingHorizontal: 18,
+    paddingTop: 17,
+    paddingBottom: 20,
+  },
+  storyTitle: {
+    color: appPalette.colors.neutral[1000],
+    fontFamily: appTypography.displayFont,
+    fontSize: 26,
     fontWeight: '900',
-    lineHeight: 16,
+    lineHeight: 31,
   },
-  cardBody: {
-    gap: 16,
-  },
-  categories: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    backgroundColor: colors.magenta,
-    color: colors.offWhite,
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    fontSize: 13,
-    fontWeight: '900',
-    lineHeight: 16,
-  },
-  title: {
-    color: colors.charcoal,
-    fontSize: 48,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 50,
-  },
-  summary: {
-    maxWidth: 560,
-    color: colors.charcoal,
-    fontSize: 20,
-    fontWeight: '700',
-    lineHeight: 29,
-  },
-  cardBottom: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 20,
-  },
-  openLabel: {
-    color: colors.indigo,
-    fontSize: 18,
-    fontWeight: '900',
+  storySummary: {
+    color: appPalette.colors.neutral[700],
+    fontSize: 15,
     lineHeight: 22,
   },
-  colorStack: {
-    flexDirection: 'row',
-    overflow: 'hidden',
-    borderWidth: 3,
-    borderColor: colors.charcoal,
-    borderRadius: 999,
-  },
-  colorBlock: {
-    width: 30,
-    height: 30,
-  },
-  marigold: {
-    backgroundColor: colors.marigold,
-  },
-  magenta: {
-    backgroundColor: colors.magenta,
-  },
-  blue: {
-    backgroundColor: colors.blue,
-  },
-  stateScreen: {
-    flex: 1,
-    justifyContent: 'center',
-    gap: 14,
-    backgroundColor: colors.offWhite,
+  emptyState: {
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 20,
+    backgroundColor: appPalette.grays.white,
     paddingHorizontal: 24,
+    paddingVertical: 40,
   },
-  stateTitle: {
-    color: colors.indigo,
-    fontSize: 34,
-    fontWeight: '900',
-    letterSpacing: 0,
-    lineHeight: 38,
+  emptyTitle: {
+    color: appColors.text.primary,
+    fontFamily: appTypography.displayFont,
+    fontSize: 23,
+    lineHeight: 28,
   },
-  stateText: {
-    color: colors.charcoal,
-    fontSize: 17,
-    fontWeight: '700',
-    lineHeight: 25,
+  emptyText: {
+    color: appPalette.colors.neutral[600],
+    fontSize: 15,
+    lineHeight: 21,
   },
-  stateButton: {
-    alignSelf: 'flex-start',
-    borderRadius: 999,
-    backgroundColor: colors.indigo,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-  },
-  stateButtonText: {
-    color: colors.offWhite,
-    fontSize: 16,
-    fontWeight: '900',
-    lineHeight: 18,
+  pressed: {
+    opacity: 0.7,
   },
 })

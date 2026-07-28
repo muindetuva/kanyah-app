@@ -64,7 +64,13 @@ export default function LoginScreen() {
           </View>
         </View>
 
-        <AuthPrimaryButton label="LOG IN" onPress={Keyboard.dismiss} />
+        <AuthPrimaryButton
+          label="LOG IN"
+          onPress={() => {
+            Keyboard.dismiss()
+            router.replace('/who-is-reading')
+          }}
+        />
 
         <View style={styles.footerRow}>
           <Text style={styles.footerText}>Don&apos;t have an account? </Text>
