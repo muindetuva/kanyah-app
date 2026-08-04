@@ -3,6 +3,7 @@ import { SymbolView } from 'expo-symbols'
 import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
+import { useAuth } from '@/features/auth/context/auth-context'
 import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
@@ -13,6 +14,8 @@ import { appTypography } from '@/theme/typography'
 const categories = ['Folklore', 'Adventure', 'Mystery', 'Fairy Tales'] as const
 
 function LibraryHeader() {
+  const { activeProfile } = useAuth()
+
   return (
     <View style={styles.header}>
       <Pressable
@@ -38,7 +41,7 @@ function LibraryHeader() {
         onPress={() => router.push('/who-is-reading')}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <ProfileAvatar avatar="paw" size={44} />
+        <ProfileAvatar avatar={activeProfile?.avatar_key ?? 'paw'} size={44} />
       </Pressable>
     </View>
   )

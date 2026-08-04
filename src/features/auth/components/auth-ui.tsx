@@ -92,12 +92,13 @@ export function AuthBackButton({ onPress }: AuthBackButtonProps) {
 }
 
 type AuthFieldProps = TextInputProps & {
+  error?: string
   icon: Extract<AuthIconName, 'lock' | 'lockReset' | 'person' | 'phone'>
   label: string
   passwordToggle?: boolean
 }
 
-export function AuthField({ icon, label, passwordToggle = false, secureTextEntry, ...inputProps }: AuthFieldProps) {
+export function AuthField({ error, icon, label, passwordToggle = false, secureTextEntry, ...inputProps }: AuthFieldProps) {
   const [focused, setFocused] = useState(false)
   const [passwordVisible, setPasswordVisible] = useState(false)
   const isSecure = passwordToggle ? !passwordVisible : secureTextEntry
@@ -105,7 +106,7 @@ export function AuthField({ icon, label, passwordToggle = false, secureTextEntry
   return (
     <View style={styles.fieldGroup}>
       <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.inputFrame, focused && styles.inputFrameFocused]}>
+      <View style={[styles.inputFrame, focused && styles.inputFrameFocused, error && styles.inputFrameError]}>
         <AuthIcon name={icon} />
         <TextInput
           {...inputProps}
@@ -133,21 +134,29 @@ export function AuthField({ icon, label, passwordToggle = false, secureTextEntry
           </Pressable>
         ) : null}
       </View>
+      {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
   )
 }
 
 type AuthPrimaryButtonProps = {
+  disabled?: boolean
   label: string
   onPress: () => void
 }
 
-export function AuthPrimaryButton({ label, onPress }: AuthPrimaryButtonProps) {
+export function AuthPrimaryButton({ disabled = false, label, onPress }: AuthPrimaryButtonProps) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.primaryButton,
+        disabled && styles.primaryButtonDisabled,
+        pressed && styles.pressed,
+      ]}
     >
       <Text style={styles.primaryButtonLabel}>{label}</Text>
       <AuthIcon color={appColors.text.onPrimary} name="arrowForward" size={20} />
@@ -193,7 +202,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   inputFrame: {
-    minHeight: 56,
+    height: 56,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -206,14 +215,29 @@ const styles = StyleSheet.create({
   inputFrameFocused: {
     borderColor: appPalette.colors.secondary[300],
   },
+  inputFrameError: {
+    borderColor: appPalette.colors.primary[300],
+  },
+  fieldError: {
+    color: appPalette.colors.primary[500],
+    fontSize: 12,
+    lineHeight: 16,
+  },
   input: {
     flex: 1,
+    alignSelf: 'stretch',
     minWidth: 0,
     paddingVertical: 0,
+    borderWidth: 0,
+    borderRadius: 0,
+    backgroundColor: 'transparent',
     color: appPalette.colors.neutral[1000],
     fontSize: 16,
     lineHeight: 21,
+    outlineColor: 'transparent',
+    outlineStyle: 'solid',
     outlineWidth: 0,
+    textAlignVertical: 'center',
   },
   inputAction: {
     width: 32,
@@ -230,6 +254,9 @@ const styles = StyleSheet.create({
     gap: 8,
     borderRadius: 999,
     backgroundColor: appColors.actions.primary,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.55,
   },
   primaryButtonLabel: {
     color: appColors.text.onPrimary,

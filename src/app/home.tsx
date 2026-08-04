@@ -1,9 +1,11 @@
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
+import { useEffect } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
+import { useAuth } from '@/features/auth/context/auth-context'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { appColors, appPalette } from '@/theme/colors'
@@ -125,6 +127,22 @@ function StoryTile({ artwork, title }: { artwork: 'golden' | 'juma'; title: stri
 }
 
 export default function ChildHomeScreen() {
+  const { activeProfile, isRestoring, user } = useAuth()
+
+  useEffect(() => {
+    if (!isRestoring && !user) {
+      router.replace('/login')
+      return
+    }
+
+    if (!isRestoring && user && !activeProfile) {
+      router.replace('/who-is-reading')
+    }
+  }, [activeProfile, isRestoring, user])
+
+  const profileName = activeProfile?.display_name ?? 'Reader'
+  const profileAvatar = activeProfile?.avatar_key ?? 'explorer'
+
   return (
     <ChildAppShell activeTab="home">
       <ScrollView
@@ -134,7 +152,7 @@ export default function ChildHomeScreen() {
       >
         <View style={styles.header}>
           <Text accessibilityRole="header" style={styles.greeting}>
-            KARIBU, KOFI!
+            KARIBU, {profileName.toUpperCase()}!
           </Text>
           <Pressable
             accessibilityLabel="Switch profile"
@@ -143,7 +161,7 @@ export default function ChildHomeScreen() {
             onPress={() => router.push('/who-is-reading')}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <ProfileAvatar avatar="paw" size={44} />
+            <ProfileAvatar avatar={profileAvatar} size={44} />
           </Pressable>
         </View>
 

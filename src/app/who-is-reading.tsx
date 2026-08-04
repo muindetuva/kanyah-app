@@ -1,7 +1,10 @@
 import { router } from 'expo-router'
+import { useEffect } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { AuthBackButton, AuthShell } from '@/features/auth/components/auth-ui'
+import { useAuth } from '@/features/auth/context/auth-context'
+import type { ChildProfile } from '@/features/auth/types'
 import {
   ProfileAvatar,
   type ProfileAvatarId,
@@ -13,16 +16,17 @@ type ProfileOptionProps = {
   avatar: ProfileAvatarId
   disabled?: boolean
   label: string
+  onPress?: () => void
   role?: string
 }
 
-function ProfileOption({ avatar, disabled = false, label, role }: ProfileOptionProps) {
+function ProfileOption({ avatar, disabled = false, label, onPress, role }: ProfileOptionProps) {
   return (
     <Pressable
       accessibilityHint={disabled ? 'Parent home will be added later' : 'Opens this child profile'}
       accessibilityRole="button"
       disabled={disabled}
-      onPress={() => router.replace('/home')}
+      onPress={onPress}
       style={({ pressed }) => [styles.profileOption, pressed && styles.pressed]}
     >
       <ProfileAvatar avatar={avatar} size={86} />
@@ -32,19 +36,30 @@ function ProfileOption({ avatar, disabled = false, label, role }: ProfileOptionP
   )
 }
 
-function goBack() {
-  if (router.canGoBack()) {
-    router.back()
-    return
+export default function WhoIsReadingScreen() {
+  const { isRestoring, logout, selectProfile, user } = useAuth()
+
+  useEffect(() => {
+    if (!isRestoring && !user) {
+      router.replace('/login')
+    }
+  }, [isRestoring, user])
+
+  function openProfile(profile: ChildProfile) {
+    selectProfile(profile)
+    router.replace('/home')
   }
 
-  router.replace('/login')
-}
+  async function handleLogout() {
+    await logout()
+    router.replace('/')
+  }
 
-export default function WhoIsReadingScreen() {
+  const parentName = user?.name.split(' ')[0] ?? 'Parent'
+
   return (
     <AuthShell contentStyle={styles.scrollContent}>
-      <AuthBackButton onPress={goBack} />
+      <AuthBackButton onPress={() => void handleLogout()} />
 
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
@@ -54,9 +69,15 @@ export default function WhoIsReadingScreen() {
       </View>
 
       <View style={styles.profileGrid}>
-        <ProfileOption avatar="paw" label="Kofi" />
-        <ProfileOption avatar="explorer" label="Amara" />
-        <ProfileOption avatar="parent" disabled label="Jane" role="Parent" />
+        {user?.child_profiles.map((profile) => (
+          <ProfileOption
+            avatar={profile.avatar_key}
+            key={profile.id}
+            label={profile.display_name}
+            onPress={() => openProfile(profile)}
+          />
+        ))}
+        <ProfileOption avatar="parent" disabled label={parentName} role="Parent" />
 
         <Pressable
           accessibilityLabel="Add profile"

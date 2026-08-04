@@ -8,6 +8,8 @@ import {
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
+import { useAuth } from '@/features/auth/context/auth-context'
+import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -22,6 +24,34 @@ function goBack() {
 
 export default function SignUpScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [error, setError] = useState<unknown>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [name, setName] = useState('')
+  const [password, setPassword] = useState('')
+  const [phone, setPhone] = useState('')
+  const { register } = useAuth()
+
+  async function handleSubmit() {
+    Keyboard.dismiss()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      await register({
+        name: name.trim(),
+        phone,
+        password,
+        password_confirmation: confirmPassword,
+        terms: agreedToTerms,
+      })
+      router.push('/create-profile')
+    } catch (submissionError) {
+      setError(submissionError)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <AuthShell contentStyle={styles.scrollContent}>
@@ -40,40 +70,56 @@ export default function SignUpScreen() {
         <View style={styles.form}>
           <AuthField
             autoComplete="name"
+            editable={!isSubmitting}
+            error={getApiFieldError(error, 'name')}
             icon="person"
             label="FULL NAME"
+            onChangeText={setName}
             placeholder="Your full name"
             returnKeyType="next"
             textContentType="name"
+            value={name}
           />
           <AuthField
             autoComplete="tel"
+            editable={!isSubmitting}
+            error={getApiFieldError(error, 'phone')}
             icon="phone"
             keyboardType="phone-pad"
             label="PHONE NUMBER"
+            onChangeText={setPhone}
             placeholder="+254 712345678"
             returnKeyType="next"
             textContentType="telephoneNumber"
+            value={phone}
           />
           <AuthField
             autoCapitalize="none"
             autoComplete="new-password"
+            editable={!isSubmitting}
+            error={getApiFieldError(error, 'password')}
             icon="lock"
             label="PASSWORD"
+            onChangeText={setPassword}
             passwordToggle
             placeholder="Min. 8 characters"
             returnKeyType="next"
             textContentType="newPassword"
+            value={password}
           />
           <AuthField
             autoCapitalize="none"
             autoComplete="new-password"
+            editable={!isSubmitting}
+            error={getApiFieldError(error, 'password_confirmation')}
             icon="lockReset"
             label="CONFIRM PASSWORD"
+            onChangeText={setConfirmPassword}
             placeholder="Confirm your password"
             returnKeyType="done"
             secureTextEntry
             textContentType="newPassword"
+            value={confirmPassword}
           />
         </View>
 
@@ -91,13 +137,20 @@ export default function SignUpScreen() {
             <Text style={styles.linkText}>Privacy Policy</Text>
           </Text>
         </Pressable>
+        {getApiFieldError(error, 'terms') ? (
+          <Text style={styles.termsError}>{getApiFieldError(error, 'terms')}</Text>
+        ) : null}
+
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.submissionError}>
+            {getApiErrorMessage(error, 'We could not create your account. Please try again.')}
+          </Text>
+        ) : null}
 
         <AuthPrimaryButton
-          label="CREATE ACCOUNT"
-          onPress={() => {
-            Keyboard.dismiss()
-            router.push('/create-profile')
-          }}
+          disabled={isSubmitting}
+          label={isSubmitting ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT'}
+          onPress={() => void handleSubmit()}
         />
 
         <View style={styles.footerRow}>
@@ -172,6 +225,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     marginTop: 12,
+  },
+  termsError: {
+    marginTop: -8,
+    color: appPalette.colors.primary[500],
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  submissionError: {
+    marginBottom: 10,
+    color: appPalette.colors.primary[500],
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   checkbox: {
     width: 22,

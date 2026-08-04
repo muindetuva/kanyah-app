@@ -1,5 +1,5 @@
 import { router } from 'expo-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 
 import {
@@ -8,14 +8,15 @@ import {
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
-import {
-  ProfileAvatar,
-  type ProfileAvatarId,
-} from '@/features/profiles/components/profile-avatar'
+import { useAuth } from '@/features/auth/context/auth-context'
+import type { ChildAvatarKey } from '@/features/auth/types'
+import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import { createChildProfile } from '@/features/profiles/api/child-profiles'
+import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
-const avatarOptions: ProfileAvatarId[] = ['paw', 'explorer', 'rocket', 'hare']
+const avatarOptions: ChildAvatarKey[] = ['paw', 'explorer', 'rocket', 'hare']
 
 function goBack() {
   if (router.canGoBack()) {
@@ -23,13 +24,46 @@ function goBack() {
     return
   }
 
-  router.replace('/signup')
+  router.replace('/who-is-reading')
 }
 
 export default function CreateProfileScreen() {
   const [age, setAge] = useState(5)
-  const [avatar, setAvatar] = useState<ProfileAvatarId>('explorer')
+  const [avatar, setAvatar] = useState<ChildAvatarKey>('explorer')
+  const [error, setError] = useState<unknown>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [name, setName] = useState('')
+  const { addChildProfile, isRestoring, user } = useAuth()
+
+  useEffect(() => {
+    if (!isRestoring && !user) {
+      router.replace('/login')
+    }
+  }, [isRestoring, user])
+
+  async function handleSubmit() {
+    if (!name.trim()) {
+      setError(new Error('Enter the child’s name.'))
+      return
+    }
+
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const profile = await createChildProfile({
+        display_name: name.trim(),
+        age,
+        avatar_key: avatar,
+      })
+      addChildProfile(profile)
+      router.replace('/home')
+    } catch (submissionError) {
+      setError(submissionError)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   return (
     <AuthShell contentStyle={styles.scrollContent}>
@@ -49,6 +83,8 @@ export default function CreateProfileScreen() {
 
         <AuthField
           autoComplete="name"
+          editable={!isSubmitting}
+          error={getApiFieldError(error, 'display_name')}
           icon="person"
           label="CHILD'S NAME"
           onChangeText={setName}
@@ -105,8 +141,18 @@ export default function CreateProfileScreen() {
         </View>
       </View>
 
+      {error ? (
+        <Text accessibilityRole="alert" style={styles.submissionError}>
+          {getApiErrorMessage(error, 'We could not create this profile. Please try again.')}
+        </Text>
+      ) : null}
+
       <View style={styles.action}>
-        <AuthPrimaryButton label="CREATE PROFILE" onPress={() => router.replace('/home')} />
+        <AuthPrimaryButton
+          disabled={isRestoring || isSubmitting || !user}
+          label={isSubmitting ? 'CREATING PROFILE…' : 'CREATE PROFILE'}
+          onPress={() => void handleSubmit()}
+        />
       </View>
     </AuthShell>
   )
@@ -202,6 +248,14 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: 26,
+  },
+  submissionError: {
+    marginTop: 18,
+    paddingHorizontal: 12,
+    color: appPalette.colors.primary[500],
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   pressed: {
     opacity: 0.7,

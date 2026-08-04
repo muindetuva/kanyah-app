@@ -1,9 +1,11 @@
 import { Image } from 'expo-image'
 import { router } from 'expo-router'
+import { useEffect } from 'react'
 import { Pressable, SafeAreaView, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
+import { useAuth } from '@/features/auth/context/auth-context'
 import { appColors } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -11,7 +13,14 @@ const verticalLogo = require('../../assets/images/kanyah-vertical-logo.svg')
 
 export default function WelcomeScreen() {
   const { height } = useWindowDimensions()
+  const { isRestoring, user } = useAuth()
   const isCompact = height < 760
+
+  useEffect(() => {
+    if (!isRestoring && user) {
+      router.replace(user.child_profiles.length === 0 ? '/create-profile' : '/who-is-reading')
+    }
+  }, [isRestoring, user])
 
   return (
     <MobileFrame

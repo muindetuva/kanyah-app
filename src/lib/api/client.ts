@@ -1,35 +1,96 @@
+import { getAuthToken } from '@/features/auth/storage/auth-token'
+
 export const API_ORIGIN =
   process.env.EXPO_PUBLIC_API_ORIGIN ?? 'http://localhost:8000'
+
+export type ApiValidationErrors = Record<string, string[]>
+
+export class ApiError extends Error {
+  errors: ApiValidationErrors
+  status: number
+
+  constructor(message: string, status: number, errors: ApiValidationErrors = {}) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.errors = errors
+  }
+}
 
 function buildApiUrl(path: string) {
   return `${API_ORIGIN}${path.startsWith('/') ? path : `/${path}`}`
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(buildApiUrl(path))
-
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`)
-  }
-
-  return response.json() as Promise<T>
+type ApiRequestOptions = {
+  authenticated?: boolean
+  body?: unknown
+  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
 }
 
-export async function apiPost<T>(path: string, body: unknown): Promise<T> {
+async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  }
+
+  if (options.body !== undefined) {
+    headers['Content-Type'] = 'application/json'
+  }
+
+  if (options.authenticated) {
+    const token = await getAuthToken()
+
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  }
+
   const response = await fetch(buildApiUrl(path), {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
+    method: options.method ?? 'GET',
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
   })
 
-  const payload = (await response.json()) as T & { message?: string }
+  const payload = (await response.json()) as T & {
+    errors?: ApiValidationErrors
+    message?: string
+  }
 
   if (!response.ok) {
-    throw new Error(payload.message ?? `Request failed with status ${response.status}`)
+    throw new ApiError(
+      payload.message ?? `Request failed with status ${response.status}`,
+      response.status,
+      payload.errors,
+    )
   }
 
   return payload
+}
+
+export function apiGet<T>(path: string, authenticated = false): Promise<T> {
+  return apiRequest<T>(path, { authenticated })
+}
+
+export function apiPost<T>(path: string, body?: unknown, authenticated = false): Promise<T> {
+  return apiRequest<T>(path, {
+    method: 'POST',
+    body,
+    authenticated,
+  })
+}
+
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiError) {
+    const firstValidationMessage = Object.values(error.errors)[0]?.[0]
+    return firstValidationMessage ?? error.message
+  }
+
+  if (error instanceof Error) {
+    return error.message
+  }
+
+  return fallback
+}
+
+export function getApiFieldError(error: unknown, field: string): string | undefined {
+  return error instanceof ApiError ? error.errors[field]?.[0] : undefined
 }

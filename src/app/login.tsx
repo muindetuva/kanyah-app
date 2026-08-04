@@ -1,4 +1,5 @@
 import { router } from 'expo-router'
+import { useState } from 'react'
 import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import {
@@ -7,6 +8,8 @@ import {
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
+import { useAuth } from '@/features/auth/context/auth-context'
+import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -20,6 +23,27 @@ function goBack() {
 }
 
 export default function LoginScreen() {
+  const [error, setError] = useState<unknown>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [password, setPassword] = useState('')
+  const [phone, setPhone] = useState('')
+  const { login } = useAuth()
+
+  async function handleSubmit() {
+    Keyboard.dismiss()
+    setError(null)
+    setIsSubmitting(true)
+
+    try {
+      const user = await login({ phone, password })
+      router.replace(user.child_profiles.length === 0 ? '/create-profile' : '/who-is-reading')
+    } catch (submissionError) {
+      setError(submissionError)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
     <AuthShell contentStyle={styles.scrollContent}>
       <AuthBackButton onPress={goBack} />
@@ -35,23 +59,31 @@ export default function LoginScreen() {
         <View style={styles.form}>
           <AuthField
             autoComplete="tel"
+            editable={!isSubmitting}
+            error={getApiFieldError(error, 'phone')}
             icon="phone"
             keyboardType="phone-pad"
             label="PHONE NUMBER"
+            onChangeText={setPhone}
             placeholder="+254 712345678"
             returnKeyType="next"
             textContentType="telephoneNumber"
+            value={phone}
           />
           <View>
             <AuthField
               autoCapitalize="none"
               autoComplete="current-password"
+              editable={!isSubmitting}
+              error={getApiFieldError(error, 'password')}
               icon="lock"
               label="PASSWORD"
+              onChangeText={setPassword}
               passwordToggle
               placeholder="Enter your password"
               returnKeyType="done"
               textContentType="password"
+              value={password}
             />
             <Pressable
               accessibilityRole="link"
@@ -64,12 +96,16 @@ export default function LoginScreen() {
           </View>
         </View>
 
+        {error ? (
+          <Text accessibilityRole="alert" style={styles.submissionError}>
+            {getApiErrorMessage(error, 'We could not log you in. Please try again.')}
+          </Text>
+        ) : null}
+
         <AuthPrimaryButton
-          label="LOG IN"
-          onPress={() => {
-            Keyboard.dismiss()
-            router.replace('/who-is-reading')
-          }}
+          disabled={isSubmitting}
+          label={isSubmitting ? 'LOGGING IN…' : 'LOG IN'}
+          onPress={() => void handleSubmit()}
         />
 
         <View style={styles.footerRow}>
@@ -126,6 +162,13 @@ const styles = StyleSheet.create({
     gap: 18,
     marginTop: 30,
     marginBottom: 24,
+  },
+  submissionError: {
+    marginBottom: 14,
+    color: appPalette.colors.primary[500],
+    fontSize: 13,
+    lineHeight: 18,
+    textAlign: 'center',
   },
   forgotButton: {
     alignSelf: 'flex-end',
