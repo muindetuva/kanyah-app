@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
+import type { ViewToken } from 'react-native'
 import {
   FlatList,
   LayoutChangeEvent,
@@ -14,41 +15,35 @@ import {
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
-import { getLocalStory } from '@/features/stories/data/local-stories'
+import { useStory, useStoryCards } from '@/features/stories/hooks/use-story-catalog'
+import type { Story, StoryCard } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
+
+const storyViewabilityConfig = { itemVisiblePercentThreshold: 60 }
 
 function ReadingPage({
   card,
   height,
-  index,
   story,
 }: {
-  card: string
+  card: StoryCard
   height: number
-  index: number
-  story: NonNullable<ReturnType<typeof getLocalStory>>
+  story: Story
 }) {
+  const artworkHeight = Math.min(420, Math.max(260, Math.round(height * 0.52)))
+
   return (
     <View style={[styles.page, { height }]}>
-      <Text style={styles.counter}>
-        Screen {index + 1} of {story.cards.length}
-      </Text>
-
       <View style={styles.readingCard}>
         <View style={styles.textPanel}>
-          <Text style={styles.cardText}>{card}</Text>
+          <Text style={styles.cardText}>{card.content}</Text>
         </View>
-        <StoryArtwork artwork={story.artwork} style={styles.pageArtwork} />
-      </View>
-
-      <View accessibilityLabel={`Screen ${index + 1} of ${story.cards.length}`} style={styles.progress}>
-        {story.cards.map((_item, dotIndex) => (
-          <View
-            key={`${story.slug}-progress-${dotIndex}`}
-            style={[styles.progressDot, dotIndex === index && styles.progressDotActive]}
-          />
-        ))}
+        <StoryArtwork
+          accessibilityLabel={card.image?.alt ?? story.coverImage?.alt ?? story.title}
+          imageUrl={card.image?.url ?? story.coverImage?.url}
+          style={[styles.pageArtwork, { height: artworkHeight }]}
+        />
       </View>
     </View>
   )
@@ -57,8 +52,22 @@ function ReadingPage({
 export default function StoryReaderScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
-  const story = getLocalStory(slug ?? '')
+  const storyQuery = useStory(slug)
+  const cardsQuery = useStoryCards(slug)
+  const story = storyQuery.data
+  const cards = cardsQuery.data
   const [pageHeight, setPageHeight] = useState(0)
+  const [activePage, setActivePage] = useState(0)
+  const handleViewableItemsChanged = useCallback(
+    ({ viewableItems }: { viewableItems: ViewToken<StoryCard>[] }) => {
+      const nextPage = viewableItems[0]?.index
+
+      if (nextPage !== null && nextPage !== undefined) {
+        setActivePage(nextPage)
+      }
+    },
+    [],
+  )
 
   function returnToSummary() {
     if (router.canGoBack()) {
@@ -77,7 +86,7 @@ export default function StoryReaderScreen() {
     }
   }
 
-  if (!story) {
+  if (storyQuery.isPending || cardsQuery.isPending) {
     return (
       <MobileFrame
         backgroundColor={appPalette.colors.neutral[1000]}
@@ -86,8 +95,35 @@ export default function StoryReaderScreen() {
         <KanyahScreenBackground>
           <SafeAreaView style={styles.safeArea}>
             <View style={styles.missingState}>
-              <Text style={styles.missingTitle}>STORY NOT FOUND</Text>
-              <Text style={styles.missingText}>This story is not in the local library yet.</Text>
+              <Text style={styles.missingTitle}>OPENING STORY</Text>
+              <Text style={styles.missingText}>Getting the next part ready...</Text>
+            </View>
+          </SafeAreaView>
+        </KanyahScreenBackground>
+      </MobileFrame>
+    )
+  }
+
+  if (storyQuery.isError || cardsQuery.isError || !story || !cards || cards.length === 0) {
+    return (
+      <MobileFrame
+        backgroundColor={appPalette.colors.neutral[1000]}
+        frameColor={appColors.backgrounds.secondary}
+      >
+        <KanyahScreenBackground>
+          <SafeAreaView style={styles.safeArea}>
+            <View style={styles.missingState}>
+              <Text style={styles.missingTitle}>STORY UNAVAILABLE</Text>
+              <Text style={styles.missingText}>This story is not ready to read yet.</Text>
+              <Pressable
+                onPress={() => {
+                  storyQuery.refetch()
+                  cardsQuery.refetch()
+                }}
+                style={styles.retryButton}
+              >
+                <Text style={styles.retryButtonText}>TRY AGAIN</Text>
+              </Pressable>
               <Pressable onPress={() => router.navigate('/stories')} style={styles.returnButton}>
                 <Text style={styles.returnButtonText}>BACK TO STORIES</Text>
               </Pressable>
@@ -123,22 +159,45 @@ export default function StoryReaderScreen() {
             </Text>
           </View>
 
+          <View
+            accessibilityLabel={`Story progress, section ${activePage + 1} of ${cards.length}`}
+            accessibilityRole="progressbar"
+            accessibilityValue={{
+              max: cards.length,
+              min: 1,
+              now: activePage + 1,
+            }}
+            style={styles.progress}
+          >
+            {cards.map((card, dotIndex) => (
+              <View
+                key={`${story.slug}-progress-${card.id}`}
+                style={[
+                  styles.progressDot,
+                  dotIndex === activePage && styles.progressDotActive,
+                ]}
+              />
+            ))}
+          </View>
+
           <View onLayout={handleViewportLayout} style={styles.readerViewport}>
             {pageHeight > 0 ? (
               <FlatList
-                data={story.cards}
+                data={cards}
                 decelerationRate="fast"
                 getItemLayout={(_items, index) => ({
                   index,
                   length: pageHeight,
                   offset: pageHeight * index,
                 })}
-                keyExtractor={(_card, index) => `${story.slug}-${index}`}
+                keyExtractor={(card) => `${story.slug}-${card.id}`}
+                onViewableItemsChanged={handleViewableItemsChanged}
                 pagingEnabled
-                renderItem={({ index, item }) => (
-                  <ReadingPage card={item} height={pageHeight} index={index} story={story} />
+                renderItem={({ item }) => (
+                  <ReadingPage card={item} height={pageHeight} story={story} />
                 )}
                 showsVerticalScrollIndicator={false}
+                viewabilityConfig={storyViewabilityConfig}
               />
             ) : null}
           </View>
@@ -153,13 +212,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    minHeight: 90,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 13,
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 10,
+    paddingBottom: 6,
   },
   closeButton: {
     width: 42,
@@ -183,20 +242,12 @@ const styles = StyleSheet.create({
   },
   page: {
     paddingHorizontal: 16,
-    paddingBottom: 14,
-  },
-  counter: {
-    color: appPalette.colors.neutral[600],
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-    textAlign: 'center',
+    paddingBottom: 18,
   },
   readingCard: {
     flex: 1,
     gap: 14,
-    paddingTop: 14,
-    paddingBottom: 12,
+    paddingTop: 10,
   },
   textPanel: {
     minHeight: 188,
@@ -217,16 +268,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   pageArtwork: {
-    flex: 1,
-    minHeight: 280,
+    width: '100%',
     borderRadius: 20,
   },
   progress: {
-    minHeight: 22,
+    minHeight: 28,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
+    paddingHorizontal: 16,
+    paddingBottom: 4,
   },
   progressDot: {
     width: 7,
@@ -264,6 +316,18 @@ const styles = StyleSheet.create({
   },
   returnButtonText: {
     color: appColors.text.onPrimary,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  retryButton: {
+    borderWidth: 2,
+    borderColor: appColors.actions.secondary,
+    borderRadius: 24,
+    paddingHorizontal: 18,
+    paddingVertical: 11,
+  },
+  retryButtonText: {
+    color: appColors.actions.secondary,
     fontSize: 13,
     fontWeight: '800',
   },

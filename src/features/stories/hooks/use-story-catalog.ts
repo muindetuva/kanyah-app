@@ -4,6 +4,7 @@ import {
   getCategories,
   getStories,
   getStory,
+  getStoryCards,
 } from '@/features/stories/api/stories'
 import type { StoryFilters } from '@/features/stories/types'
 
@@ -35,6 +36,15 @@ export function useStory(slug: string | undefined) {
   return useQuery({
     queryKey: ['story', slug ?? ''],
     queryFn: () => getStory(slug!),
+    enabled: Boolean(slug),
+    staleTime: catalogStaleTime,
+  })
+}
+
+export function useStoryCards(slug: string | undefined) {
+  return useQuery({
+    queryKey: ['story-cards', slug ?? ''],
+    queryFn: () => getStoryCards(slug!),
     enabled: Boolean(slug),
     staleTime: catalogStaleTime,
   })

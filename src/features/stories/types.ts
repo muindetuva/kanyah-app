@@ -25,6 +25,13 @@ export type Story = {
   title: string
 }
 
+export type StoryCard = {
+  content: string
+  id: number
+  image: StoryImage | null
+  position: number
+}
+
 export type Category = StoryCategory & {
   artwork: StoryImage | null
   featuredStory: Story | null
