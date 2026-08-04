@@ -8,8 +8,9 @@ import {
   ChildAppShell,
   ParentAppShell,
 } from '@/features/navigation/components/child-app-shell'
+import { CatalogMessage } from '@/features/stories/components/catalog-feedback'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
-import { getLocalStory } from '@/features/stories/data/local-stories'
+import { useStory } from '@/features/stories/hooks/use-story-catalog'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -35,16 +36,34 @@ function returnToLibrary() {
 export default function StorySummaryScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
-  const story = getLocalStory(slug ?? '')
+  const storyQuery = useStory(slug)
+  const story = storyQuery.data
   const [favorite, setFavorite] = useState(false)
 
-  if (!story) {
+  if (storyQuery.isPending) {
     return (
       <StoryShell>
         <View style={styles.missingState}>
-          <Text style={styles.missingTitle}>STORY NOT FOUND</Text>
-          <Text style={styles.missingText}>This story is not in the local library yet.</Text>
-          <Pressable onPress={returnToLibrary} style={styles.returnButton}>
+          <CatalogMessage body="Opening your story..." title="LOADING STORY" />
+        </View>
+      </StoryShell>
+    )
+  }
+
+  if (storyQuery.isError || !story) {
+    return (
+      <StoryShell>
+        <View style={styles.missingState}>
+          <CatalogMessage
+            body="This story could not be loaded from the library."
+            onRetry={() => storyQuery.refetch()}
+            title="STORY NOT FOUND"
+          />
+          <Pressable
+            accessibilityRole="button"
+            onPress={returnToLibrary}
+            style={styles.returnButton}
+          >
             <Text style={styles.returnButtonText}>BACK TO STORIES</Text>
           </Pressable>
         </View>
@@ -60,7 +79,11 @@ export default function StorySummaryScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <StoryArtwork artwork={story.artwork} style={styles.heroArtwork} />
+          <StoryArtwork
+            accessibilityLabel={story.coverImage?.alt ?? story.title}
+            imageUrl={story.coverImage?.url}
+            style={styles.heroArtwork}
+          />
           <Pressable
             accessibilityLabel="Back to story library"
             accessibilityRole="button"
@@ -100,14 +123,20 @@ export default function StorySummaryScreen() {
           </View>
 
           <View style={styles.metadata}>
+            {story.categories[0] ? (
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>{story.categories[0].name}</Text>
+              </View>
+            ) : null}
             <View style={styles.pill}>
-              <Text style={styles.pillText}>{story.category}</Text>
+              <Text style={styles.pillText}>
+                Ages {story.minimumAge}-{story.maximumAge}
+              </Text>
             </View>
             <View style={styles.pill}>
-              <Text style={styles.pillText}>Ages 6-8</Text>
-            </View>
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>{story.cards.length} Chapters</Text>
+              <Text style={styles.pillText}>
+                {story.chapterCount} {story.chapterCount === 1 ? 'Chapter' : 'Chapters'}
+              </Text>
             </View>
           </View>
 
@@ -264,17 +293,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 12,
     paddingHorizontal: 24,
-  },
-  missingTitle: {
-    color: appColors.text.primary,
-    fontFamily: appTypography.displayFont,
-    fontSize: 30,
-    lineHeight: 36,
-  },
-  missingText: {
-    color: appPalette.colors.neutral[700],
-    fontSize: 16,
-    lineHeight: 23,
   },
   returnButton: {
     borderRadius: 24,

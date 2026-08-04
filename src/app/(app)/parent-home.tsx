@@ -7,7 +7,13 @@ import { useAuth } from '@/features/auth/context/auth-context'
 import type { ChildProfile } from '@/features/auth/types'
 import { ParentAppShell } from '@/features/navigation/components/child-app-shell'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import {
+  CatalogMessage,
+  StoryListSkeleton,
+} from '@/features/stories/components/catalog-feedback'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
+import { useStories } from '@/features/stories/hooks/use-story-catalog'
+import type { Story } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -31,28 +37,38 @@ function UsageCard() {
   )
 }
 
-function RecommendedStory({ childName }: { childName: string }) {
+function RecommendedStory({ childName, story }: { childName: string; story: Story }) {
+  const category = story.categories[0]?.name ?? 'Story'
+
   return (
     <Pressable
-      accessibilityLabel="Open Mfalme wa Mawingu"
+      accessibilityLabel={`Open ${story.title}`}
       accessibilityRole="button"
-      onPress={() => router.navigate('/stories')}
+      onPress={() =>
+        router.push({ pathname: '/stories/[slug]', params: { slug: story.slug } })
+      }
       style={({ pressed }) => [styles.storyCard, pressed && styles.pressed]}
     >
       <View style={styles.storyArtworkFrame}>
-        <StoryArtwork artwork="night-kingdom" style={styles.storyArtwork} />
+        <StoryArtwork
+          accessibilityLabel={story.coverImage?.alt ?? story.title}
+          imageUrl={story.coverImage?.url}
+          style={styles.storyArtwork}
+        />
         <View style={styles.storyShade} />
         <View style={styles.storyOverlayCopy}>
           <Text style={styles.recommendationLabel}>
             RECOMMENDED FOR {childName.toUpperCase()}
           </Text>
           <Text numberOfLines={2} style={styles.storyTitle}>
-            MFALME WA MAWINGU
+            {story.title.toUpperCase()}
           </Text>
         </View>
       </View>
       <View style={styles.storyMetaRow}>
-        <Text style={styles.storyMeta}>15 min read • Adventure</Text>
+        <Text style={styles.storyMeta}>
+          Ages {story.minimumAge}-{story.maximumAge} • {category}
+        </Text>
         <View style={styles.playButton}>
           <SymbolView
             name={{ ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' }}
@@ -197,6 +213,7 @@ function ParentActions() {
 
 export default function ParentHomeScreen() {
   const { isRestoring, readerMode, user } = useAuth()
+  const storiesQuery = useStories({ perPage: 1 })
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -218,6 +235,7 @@ export default function ParentHomeScreen() {
 
   const parentName = user?.name.split(' ')[0] ?? 'Parent'
   const recommendationName = user?.child_profiles[0]?.display_name ?? 'your family'
+  const recommendedStory = storiesQuery.data?.data[0]
 
   return (
     <ParentAppShell activeTab="home">
@@ -242,7 +260,17 @@ export default function ParentHomeScreen() {
         </View>
 
         <UsageCard />
-        <RecommendedStory childName={recommendationName} />
+        {storiesQuery.isPending ? <StoryListSkeleton /> : null}
+        {storiesQuery.isError ? (
+          <CatalogMessage
+            body="We couldn't load a recommendation right now."
+            onRetry={() => storiesQuery.refetch()}
+            title="STORIES ARE RESTING"
+          />
+        ) : null}
+        {recommendedStory ? (
+          <RecommendedStory childName={recommendationName} story={recommendedStory} />
+        ) : null}
         <ProfilesCard
           onAddProfile={() => router.push('/create-profile')}
           onEditChild={editChildProfile}

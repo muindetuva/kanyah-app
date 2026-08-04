@@ -1,7 +1,9 @@
 import { Image } from 'expo-image'
+import { SymbolView } from 'expo-symbols'
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 
 import type { LocalStoryArtwork } from '@/features/stories/data/local-stories'
+import { appPalette } from '@/theme/colors'
 
 const artworkSources = {
   'daraja-la-msituni': require('../../../../assets/images/stories/daraja-la-msituni.jpg'),
@@ -15,14 +17,42 @@ const artworkSources = {
 } as const satisfies Record<LocalStoryArtwork, number>
 
 type StoryArtworkProps = {
-  artwork: LocalStoryArtwork
+  accessibilityLabel?: string
+  artwork?: LocalStoryArtwork
+  imageUrl?: string | null
   style?: StyleProp<ViewStyle>
 }
 
-export function StoryArtwork({ artwork, style }: StoryArtworkProps) {
+export function StoryArtwork({
+  accessibilityLabel,
+  artwork,
+  imageUrl,
+  style,
+}: StoryArtworkProps) {
+  const source = imageUrl
+    ? { uri: imageUrl }
+    : artwork
+      ? artworkSources[artwork]
+      : undefined
+
   return (
     <View style={[styles.frame, style]}>
-      <Image contentFit="cover" source={artworkSources[artwork]} style={StyleSheet.absoluteFill} />
+      {source ? (
+        <Image
+          accessibilityLabel={accessibilityLabel}
+          contentFit="cover"
+          source={source}
+          style={StyleSheet.absoluteFill}
+        />
+      ) : (
+        <View style={styles.placeholder}>
+          <SymbolView
+            name={{ ios: 'book.closed.fill', android: 'menu_book', web: 'menu_book' }}
+            size={42}
+            tintColor={appPalette.colors.brown[300]}
+          />
+        </View>
+      )}
     </View>
   )
 }
@@ -30,5 +60,11 @@ export function StoryArtwork({ artwork, style }: StoryArtworkProps) {
 const styles = StyleSheet.create({
   frame: {
     overflow: 'hidden',
+  },
+  placeholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appPalette.colors.primary[100],
   },
 })

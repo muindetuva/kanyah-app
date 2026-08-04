@@ -1,4 +1,3 @@
-import { Image } from 'expo-image'
 import { router } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { useEffect } from 'react'
@@ -7,16 +6,18 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import {
+  CatalogMessage,
+  StoryListSkeleton,
+} from '@/features/stories/components/catalog-feedback'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
+import { useCategories, useStories } from '@/features/stories/hooks/use-story-catalog'
+import type { Story } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
-const jumaArtwork = require('../../../assets/images/juma.png')
-
-const categories = [
+const categoryVisuals = [
   {
-    id: 'folklore',
-    label: 'Folklore',
     backgroundColor: appPalette.colors.primary[100],
     color: appPalette.colors.primary[500],
     icon: {
@@ -26,8 +27,6 @@ const categories = [
     },
   },
   {
-    id: 'mystery',
-    label: 'Mystery',
     backgroundColor: appPalette.colors.purple[100],
     color: appPalette.colors.purple[500],
     icon: {
@@ -37,15 +36,11 @@ const categories = [
     },
   },
   {
-    id: 'adventure',
-    label: 'Adventure',
     backgroundColor: appPalette.colors.magenta[100],
     color: appPalette.colors.magenta[500],
     icon: { ios: 'globe' as const, android: 'public' as const, web: 'public' as const },
   },
   {
-    id: 'fairy',
-    label: 'Fairy',
     backgroundColor: appPalette.colors.secondary[100],
     color: appPalette.colors.secondary[500],
     icon: {
@@ -56,14 +51,14 @@ const categories = [
   },
 ] as const
 
-function SectionHeading({ title }: { title: string }) {
+function SectionHeading({ onSeeAll, title }: { onSeeAll: () => void; title: string }) {
   return (
     <View style={styles.sectionHeading}>
       <Text style={styles.sectionTitle}>{title}</Text>
       <Pressable
         accessibilityRole="button"
         hitSlop={8}
-        onPress={() => router.navigate('/stories')}
+        onPress={onSeeAll}
         style={({ pressed }) => pressed && styles.pressed}
       >
         <Text style={styles.seeAll}>See all</Text>
@@ -72,20 +67,30 @@ function SectionHeading({ title }: { title: string }) {
   )
 }
 
-function FeaturedStory() {
+function FeaturedStory({ story }: { story: Story }) {
+  const category = story.categories[0]?.name ?? 'Story'
+
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.navigate('/stories')}
+      onPress={() =>
+        router.push({ pathname: '/stories/[slug]', params: { slug: story.slug } })
+      }
       style={({ pressed }) => [styles.featuredCard, pressed && styles.pressed]}
     >
-      <Image contentFit="cover" source={jumaArtwork} style={styles.featuredImage} />
+      <StoryArtwork
+        accessibilityLabel={story.coverImage?.alt ?? story.title}
+        imageUrl={story.coverImage?.url}
+        style={styles.featuredImage}
+      />
       <View style={styles.featuredBody}>
         <View style={styles.featuredCopy}>
           <Text numberOfLines={2} style={styles.featuredTitle}>
-            MVUA ILIYOIBA SIRI
+            {story.title.toUpperCase()}
           </Text>
-          <Text style={styles.featuredMeta}>Continue reading • 15 min left</Text>
+          <Text style={styles.featuredMeta}>
+            {category} • Ages {story.minimumAge}-{story.maximumAge}
+          </Text>
         </View>
         <View style={styles.playButton}>
           <SymbolView
@@ -95,32 +100,28 @@ function FeaturedStory() {
           />
         </View>
       </View>
-      <View style={styles.progressTrack}>
-        <View style={styles.progressValue}>
-          <View style={[styles.progressSegment, styles.progressMagenta]} />
-          <View style={[styles.progressSegment, styles.progressOrange]} />
-          <View style={[styles.progressSegment, styles.progressYellow]} />
-        </View>
-      </View>
     </Pressable>
   )
 }
 
-function StoryTile({ artwork, title }: { artwork: 'golden' | 'juma'; title: string }) {
+function StoryTile({ story }: { story: Story }) {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.navigate('/stories')}
+      onPress={() =>
+        router.push({ pathname: '/stories/[slug]', params: { slug: story.slug } })
+      }
       style={({ pressed }) => [styles.storyTile, pressed && styles.pressed]}
     >
       <View style={styles.storyArtworkFrame}>
         <StoryArtwork
-          artwork={artwork === 'golden' ? 'golden-flute' : 'juma'}
+          accessibilityLabel={story.coverImage?.alt ?? story.title}
+          imageUrl={story.coverImage?.url}
           style={styles.storyArtwork}
         />
       </View>
       <Text numberOfLines={2} style={styles.storyTitle}>
-        {title}
+        {story.title}
       </Text>
     </Pressable>
   )
@@ -128,6 +129,8 @@ function StoryTile({ artwork, title }: { artwork: 'golden' | 'juma'; title: stri
 
 export default function ChildHomeScreen() {
   const { activeProfile, isRestoring, readerMode, user } = useAuth()
+  const categoriesQuery = useCategories()
+  const storiesQuery = useStories({ perPage: 8 })
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -142,6 +145,9 @@ export default function ChildHomeScreen() {
 
   const profileName = activeProfile?.display_name ?? 'Reader'
   const profileAvatar = activeProfile?.avatar_key ?? 'explorer'
+  const categories = categoriesQuery.data ?? []
+  const stories = storiesQuery.data?.data ?? []
+  const featuredStory = stories[0]
 
   return (
     <ChildAppShell activeTab="home">
@@ -169,46 +175,75 @@ export default function ChildHomeScreen() {
           </Pressable>
         </View>
 
-        <FeaturedStory />
+        {storiesQuery.isPending ? (
+          <View style={styles.featuredLoading}>
+            <StoryListSkeleton compact />
+          </View>
+        ) : null}
+        {storiesQuery.isError ? (
+          <View style={styles.sectionMessage}>
+            <CatalogMessage
+              body="We couldn't load today's stories."
+              onRetry={() => storiesQuery.refetch()}
+              title="STORIES ARE RESTING"
+            />
+          </View>
+        ) : null}
+        {featuredStory ? <FeaturedStory story={featuredStory} /> : null}
 
         <View style={styles.section}>
-          <SectionHeading title="Categories" />
+          <SectionHeading onSeeAll={() => router.push('/categories')} title="Categories" />
           <ScrollView
             contentContainerStyle={styles.categoryList}
             horizontal
             showsHorizontalScrollIndicator={false}
           >
-            {categories.map((category) => (
-              <Pressable
-                accessibilityRole="button"
-                key={category.id}
-                onPress={() => router.navigate('/stories')}
-                style={({ pressed }) => [styles.category, pressed && styles.pressed]}
-              >
-                <View
-                  style={[
-                    styles.categoryCircle,
-                    { backgroundColor: category.backgroundColor },
-                  ]}
+            {categories.map((category, index) => {
+              const visual = categoryVisuals[index % categoryVisuals.length]
+
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  key={category.id}
+                  onPress={() =>
+                    router.push({ pathname: '/stories', params: { category: category.slug } })
+                  }
+                  style={({ pressed }) => [styles.category, pressed && styles.pressed]}
                 >
-                  <SymbolView name={category.icon} size={31} tintColor={category.color} />
-                </View>
-                <Text style={styles.categoryLabel}>{category.label}</Text>
-              </Pressable>
-            ))}
+                  <View
+                    style={[
+                      styles.categoryCircle,
+                      { backgroundColor: visual.backgroundColor },
+                    ]}
+                  >
+                    <SymbolView name={visual.icon} size={31} tintColor={visual.color} />
+                  </View>
+                  <Text style={styles.categoryLabel}>{category.name}</Text>
+                </Pressable>
+              )
+            })}
           </ScrollView>
         </View>
 
         <View style={styles.section}>
-          <SectionHeading title="For you" />
+          <SectionHeading onSeeAll={() => router.navigate('/stories')} title="For you" />
           <ScrollView
             contentContainerStyle={styles.storyList}
             horizontal
             showsHorizontalScrollIndicator={false}
           >
-            <StoryTile artwork="golden" title="The Golden Flute" />
-            <StoryTile artwork="juma" title="Mvua Iliyoiba Siri" />
+            {stories.slice(1, 5).map((story) => (
+              <StoryTile key={story.id} story={story} />
+            ))}
           </ScrollView>
+          {storiesQuery.isSuccess && stories.length === 0 ? (
+            <View style={styles.sectionMessage}>
+              <CatalogMessage
+                body="Stories will appear after they are published in the Kanyah portal."
+                title="NO STORIES YET"
+              />
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </ChildAppShell>
@@ -281,32 +316,15 @@ const styles = StyleSheet.create({
     backgroundColor: appColors.actions.primary,
     boxShadow: '0 5px 12px rgba(90, 52, 28, 0.2)',
   },
-  progressTrack: {
-    height: 7,
+  featuredLoading: {
+    height: 330,
     overflow: 'hidden',
-    marginHorizontal: 20,
-    marginBottom: 18,
-    borderRadius: 4,
-    backgroundColor: appPalette.colors.neutral[200],
+    marginTop: 12,
+    marginHorizontal: 16,
   },
-  progressValue: {
-    width: '62%',
-    height: '100%',
-    flexDirection: 'row',
-    overflow: 'hidden',
-    borderRadius: 4,
-  },
-  progressSegment: {
-    flex: 1,
-  },
-  progressMagenta: {
-    backgroundColor: appPalette.colors.magenta[300],
-  },
-  progressOrange: {
-    backgroundColor: appPalette.colors.primary[300],
-  },
-  progressYellow: {
-    backgroundColor: appPalette.colors.yellow[100],
+  sectionMessage: {
+    marginHorizontal: 16,
+    marginTop: 12,
   },
   section: {
     marginTop: 32,

@@ -1,6 +1,6 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { useAuth } from '@/features/auth/context/auth-context'
@@ -9,12 +9,15 @@ import {
   ParentAppShell,
 } from '@/features/navigation/components/child-app-shell'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import {
+  CatalogMessage,
+  StoryListSkeleton,
+} from '@/features/stories/components/catalog-feedback'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
-import { type LocalStory, localStories } from '@/features/stories/data/local-stories'
+import { useCategories, useStories } from '@/features/stories/hooks/use-story-catalog'
+import type { Story } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
-
-const categories = ['Folklore', 'Adventure', 'Mystery', 'Fairy Tales'] as const
 
 function LibraryHeader() {
   const { activeProfile, readerMode } = useAuth()
@@ -54,7 +57,9 @@ function LibraryHeader() {
   )
 }
 
-function StoryCard({ story }: { story: LocalStory }) {
+function StoryCard({ story }: { story: Story }) {
+  const category = story.categories[0]?.name ?? 'Story'
+
   return (
     <Pressable
       accessibilityLabel={`Read ${story.title}`}
@@ -65,9 +70,13 @@ function StoryCard({ story }: { story: LocalStory }) {
       style={({ pressed }) => [styles.storyCard, pressed && styles.cardPressed]}
     >
       <View style={styles.artworkFrame}>
-        <StoryArtwork artwork={story.artwork} style={styles.artwork} />
+        <StoryArtwork
+          accessibilityLabel={story.coverImage?.alt ?? story.title}
+          imageUrl={story.coverImage?.url}
+          style={styles.artwork}
+        />
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryBadgeText}>{story.category.toUpperCase()}</Text>
+          <Text style={styles.categoryBadgeText}>{category.toUpperCase()}</Text>
         </View>
       </View>
       <View style={styles.storyCopy}>
@@ -80,20 +89,24 @@ function StoryCard({ story }: { story: LocalStory }) {
 
 export default function StoryLibraryScreen() {
   const { readerMode } = useAuth()
-  const [highlightedCategory, setHighlightedCategory] = useState<string>('Folklore')
+  const params = useLocalSearchParams<{ category?: string | string[] }>()
+  const routeCategory = Array.isArray(params.category) ? params.category[0] : params.category
+  const highlightedCategory = routeCategory || undefined
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const categoriesQuery = useCategories()
+  const storiesQuery = useStories({
+    category: highlightedCategory,
+    search: debouncedSearch || undefined,
+  })
 
-  const visibleStories = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase()
-
-    if (!query) {
-      return localStories
-    }
-
-    return localStories.filter((story) =>
-      `${story.title} ${story.summary} ${story.category}`.toLocaleLowerCase().includes(query),
-    )
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search.trim()), 300)
+    return () => clearTimeout(timeout)
   }, [search])
+
+  const categories = categoriesQuery.data ?? []
+  const stories = storiesQuery.data?.data ?? []
 
   const content = (
       <ScrollView
@@ -110,14 +123,16 @@ export default function StoryLibraryScreen() {
           showsHorizontalScrollIndicator={false}
         >
           {categories.map((category) => {
-            const highlighted = category === highlightedCategory
+            const highlighted = category.slug === highlightedCategory
 
             return (
               <Pressable
                 accessibilityRole="button"
                 accessibilityState={{ selected: highlighted }}
-                key={category}
-                onPress={() => setHighlightedCategory(category)}
+                key={category.id}
+                onPress={() =>
+                  router.setParams({ category: highlighted ? '' : category.slug })
+                }
                 style={({ pressed }) => [
                   styles.categoryChip,
                   highlighted && styles.categoryChipHighlighted,
@@ -130,7 +145,7 @@ export default function StoryLibraryScreen() {
                     highlighted && styles.categoryChipTextHighlighted,
                   ]}
                 >
-                  {category}
+                  {category.name}
                 </Text>
               </Pressable>
             )
@@ -158,10 +173,7 @@ export default function StoryLibraryScreen() {
           <Pressable
             accessibilityRole="button"
             hitSlop={8}
-            onPress={() => {
-              setHighlightedCategory('Folklore')
-              setSearch('')
-            }}
+            onPress={() => router.push('/categories')}
             style={({ pressed }) => pressed && styles.pressed}
           >
             <Text style={styles.allCategories}>All Categories</Text>
@@ -169,15 +181,22 @@ export default function StoryLibraryScreen() {
         </View>
 
         <View style={styles.storyList}>
-          {visibleStories.map((story) => (
-            <StoryCard key={story.slug} story={story} />
-          ))}
-
-          {visibleStories.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>NO STORY FOUND</Text>
-              <Text style={styles.emptyText}>Try another title or category.</Text>
-            </View>
+          {storiesQuery.isPending ? <StoryListSkeleton /> : null}
+          {storiesQuery.isError ? (
+            <CatalogMessage
+              body="We couldn't reach the story library."
+              onRetry={() => storiesQuery.refetch()}
+              title="STORIES ARE RESTING"
+            />
+          ) : null}
+          {storiesQuery.isSuccess
+            ? stories.map((story) => <StoryCard key={story.slug} story={story} />)
+            : null}
+          {storiesQuery.isSuccess && stories.length === 0 ? (
+            <CatalogMessage
+              body="Try another title or tap the selected category to see everything."
+              title="NO STORY FOUND"
+            />
           ) : null}
         </View>
       </ScrollView>
@@ -343,25 +362,6 @@ const styles = StyleSheet.create({
     color: appPalette.colors.neutral[700],
     fontSize: 15,
     lineHeight: 22,
-  },
-  emptyState: {
-    alignItems: 'center',
-    gap: 6,
-    borderRadius: 20,
-    backgroundColor: appPalette.grays.white,
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-  },
-  emptyTitle: {
-    color: appColors.text.primary,
-    fontFamily: appTypography.displayFont,
-    fontSize: 23,
-    lineHeight: 28,
-  },
-  emptyText: {
-    color: appPalette.colors.neutral[600],
-    fontSize: 15,
-    lineHeight: 21,
   },
   pressed: {
     opacity: 0.7,

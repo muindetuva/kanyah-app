@@ -10,6 +10,7 @@ export default function AppTabsLayout() {
     >
       <Tabs.Screen name="home" />
       <Tabs.Screen name="parent-home" />
+      <Tabs.Screen name="categories" />
       <Tabs.Screen name="stories" />
     </Tabs>
   )
