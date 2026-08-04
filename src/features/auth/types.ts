@@ -6,6 +6,7 @@ export type ChildProfile = {
   age: number
   birth_year: number
   avatar_key: ChildAvatarKey
+  avatar_url: string | null
   status: 'active' | 'inactive'
 }
 

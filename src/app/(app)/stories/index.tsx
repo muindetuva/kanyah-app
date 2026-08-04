@@ -46,6 +46,7 @@ function LibraryHeader() {
       >
         <ProfileAvatar
           avatar={readerMode === 'parent' ? 'parent' : (activeProfile?.avatar_key ?? 'paw')}
+          imageUrl={readerMode === 'parent' ? null : activeProfile?.avatar_url}
           size={44}
         />
       </Pressable>

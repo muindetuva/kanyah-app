@@ -66,11 +66,12 @@ function RecommendedStory({ childName }: { childName: string }) {
 }
 
 type ProfilesCardProps = {
-  onSelectChild: (profile: ChildProfile) => void
+  onAddProfile: () => void
+  onEditChild: (profile: ChildProfile) => void
   profiles: ChildProfile[]
 }
 
-function ProfilesCard({ onSelectChild, profiles }: ProfilesCardProps) {
+function ProfilesCard({ onAddProfile, onEditChild, profiles }: ProfilesCardProps) {
   return (
     <View style={styles.profilesCard}>
       <Text style={styles.cardEyebrow}>PROFILES</Text>
@@ -81,18 +82,37 @@ function ProfilesCard({ onSelectChild, profiles }: ProfilesCardProps) {
       >
         {profiles.map((profile) => (
           <Pressable
-            accessibilityLabel={`Open ${profile.display_name}'s home`}
+            accessibilityLabel={`Edit ${profile.display_name}'s profile`}
             accessibilityRole="button"
             key={profile.id}
-            onPress={() => onSelectChild(profile)}
+            onPress={() => onEditChild(profile)}
             style={({ pressed }) => [styles.profileItem, pressed && styles.pressed]}
           >
-            <ProfileAvatar avatar={profile.avatar_key} size={64} />
+            <ProfileAvatar
+              avatar={profile.avatar_key}
+              imageUrl={profile.avatar_url}
+              size={64}
+            />
             <Text numberOfLines={1} style={styles.profileLabel}>
               {profile.display_name}
             </Text>
           </Pressable>
         ))}
+        <Pressable
+          accessibilityLabel="Add child profile"
+          accessibilityRole="button"
+          onPress={onAddProfile}
+          style={({ pressed }) => [styles.profileItem, pressed && styles.pressed]}
+        >
+          <View style={styles.addProfileAvatar}>
+            <SymbolView
+              name={{ ios: 'plus', android: 'add', web: 'add' }}
+              size={28}
+              tintColor={appColors.actions.secondary}
+            />
+          </View>
+          <Text style={styles.profileLabel}>Add Profile</Text>
+        </Pressable>
         <View style={styles.profileItem}>
           <ProfileAvatar avatar="parent" selected size={64} />
           <Text style={styles.profileLabel}>Parent</Text>
@@ -176,7 +196,7 @@ function ParentActions() {
 }
 
 export default function ParentHomeScreen() {
-  const { isRestoring, readerMode, selectProfile, user } = useAuth()
+  const { isRestoring, readerMode, user } = useAuth()
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -189,9 +209,11 @@ export default function ParentHomeScreen() {
     }
   }, [isRestoring, readerMode, user])
 
-  function openChildHome(profile: ChildProfile) {
-    selectProfile(profile)
-    router.navigate('/home')
+  function editChildProfile(profile: ChildProfile) {
+    router.push({
+      pathname: '/profiles/[id]/edit',
+      params: { id: String(profile.id) },
+    })
   }
 
   const parentName = user?.name.split(' ')[0] ?? 'Parent'
@@ -222,7 +244,8 @@ export default function ParentHomeScreen() {
         <UsageCard />
         <RecommendedStory childName={recommendationName} />
         <ProfilesCard
-          onSelectChild={openChildHome}
+          onAddProfile={() => router.push('/create-profile')}
+          onEditChild={editChildProfile}
           profiles={user?.child_profiles ?? []}
         />
         <ParentActions />
@@ -381,6 +404,17 @@ const styles = StyleSheet.create({
   profileItem: {
     width: 72,
     alignItems: 'center',
+  },
+  addProfileAvatar: {
+    width: 64,
+    height: 64,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: appPalette.colors.secondary[100],
+    borderStyle: 'dashed',
+    borderRadius: 32,
+    backgroundColor: appPalette.colors.secondary[10],
   },
   profileLabel: {
     width: '100%',

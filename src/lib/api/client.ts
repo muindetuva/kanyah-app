@@ -31,8 +31,10 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
   const headers: Record<string, string> = {
     Accept: 'application/json',
   }
+  const isFormData =
+    typeof FormData !== 'undefined' && options.body instanceof FormData
 
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !isFormData) {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -44,13 +46,20 @@ async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Pro
     }
   }
 
+  const body: BodyInit | undefined =
+    options.body === undefined
+      ? undefined
+      : isFormData
+        ? (options.body as FormData)
+        : JSON.stringify(options.body)
+
   const response = await fetch(buildApiUrl(path), {
     method: options.method ?? 'GET',
     headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    body,
   })
 
-  const payload = (await response.json()) as T & {
+  const payload = (response.status === 204 ? {} : await response.json()) as T & {
     errors?: ApiValidationErrors
     message?: string
   }
@@ -74,6 +83,13 @@ export function apiPost<T>(path: string, body?: unknown, authenticated = false):
   return apiRequest<T>(path, {
     method: 'POST',
     body,
+    authenticated,
+  })
+}
+
+export function apiDelete<T>(path: string, authenticated = false): Promise<T> {
+  return apiRequest<T>(path, {
+    method: 'DELETE',
     authenticated,
   })
 }

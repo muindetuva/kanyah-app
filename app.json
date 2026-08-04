@@ -30,7 +30,15 @@
           "backgroundColor": "#F7F3EA"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Kanyah to use a photo for your child's profile.",
+          "cameraPermission": "Allow Kanyah to take a photo for your child's profile.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

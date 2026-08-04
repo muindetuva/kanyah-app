@@ -1,3 +1,4 @@
+import { Image } from 'expo-image'
 import { SymbolView } from 'expo-symbols'
 import { StyleSheet, View } from 'react-native'
 
@@ -35,11 +36,17 @@ const avatarStyles = {
 
 type ProfileAvatarProps = {
   avatar: ProfileAvatarId
+  imageUrl?: string | null
   selected?: boolean
   size?: number
 }
 
-export function ProfileAvatar({ avatar, selected = false, size = 64 }: ProfileAvatarProps) {
+export function ProfileAvatar({
+  avatar,
+  imageUrl = null,
+  selected = false,
+  size = 64,
+}: ProfileAvatarProps) {
   const avatarStyle = avatarStyles[avatar]
   const iconSize = Math.round(size * 0.46)
 
@@ -56,17 +63,31 @@ export function ProfileAvatar({ avatar, selected = false, size = 64 }: ProfileAv
         selected && styles.avatarSelected,
       ]}
     >
-      <SymbolView name={avatarStyle.icon} size={iconSize} tintColor={avatarStyle.color} />
+      {imageUrl ? (
+        <Image
+          accessibilityLabel="Profile photo"
+          contentFit="cover"
+          source={{ uri: imageUrl }}
+          style={[styles.image, { borderRadius: size / 2 }]}
+        />
+      ) : (
+        <SymbolView name={avatarStyle.icon} size={iconSize} tintColor={avatarStyle.color} />
+      )}
     </View>
   )
 }
 
 const styles = StyleSheet.create({
   avatar: {
+    overflow: 'hidden',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: 'rgba(255, 255, 255, 0.92)',
+  },
+  image: {
+    width: '100%',
+    height: '100%',
   },
   avatarSelected: {
     borderColor: appPalette.colors.secondary[300],

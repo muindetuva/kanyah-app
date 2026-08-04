@@ -23,15 +23,17 @@ export type ReaderMode = 'child' | 'parent'
 
 type AuthContextValue = {
   activeProfile: ChildProfile | null
-  addChildProfile: (profile: ChildProfile) => void
+  addChildProfile: (profile: ChildProfile, options?: { select?: boolean }) => void
   isRestoring: boolean
   login: (input: LoginInput) => Promise<AuthUser>
   logout: () => Promise<void>
   readerMode: ReaderMode | null
+  removeChildProfile: (profileId: number) => void
   refreshUser: () => Promise<AuthUser>
   register: (input: RegisterInput) => Promise<AuthUser>
   selectParent: () => void
   selectProfile: (profile: ChildProfile) => void
+  updateChildProfile: (profile: ChildProfile) => void
   user: AuthUser | null
 }
 
@@ -118,15 +120,55 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return currentUser
   }, [])
 
-  const addChildProfile = useCallback((profile: ChildProfile) => {
+  const addChildProfile = useCallback((profile: ChildProfile, options?: { select?: boolean }) => {
     setUser((currentUser) =>
       currentUser
         ? { ...currentUser, child_profiles: [...currentUser.child_profiles, profile] }
         : null,
     )
-    setActiveProfile(profile)
-    setReaderMode('child')
-    persistReaderSelection({ mode: 'child', profileId: profile.id })
+    if (options?.select !== false) {
+      setActiveProfile(profile)
+      setReaderMode('child')
+      persistReaderSelection({ mode: 'child', profileId: profile.id })
+    }
+  }, [])
+
+  const updateChildProfile = useCallback((profile: ChildProfile) => {
+    setUser((currentUser) =>
+      currentUser
+        ? {
+            ...currentUser,
+            child_profiles: currentUser.child_profiles.map((currentProfile) =>
+              currentProfile.id === profile.id ? profile : currentProfile,
+            ),
+          }
+        : null,
+    )
+    setActiveProfile((currentProfile) =>
+      currentProfile?.id === profile.id ? profile : currentProfile,
+    )
+  }, [])
+
+  const removeChildProfile = useCallback((profileId: number) => {
+    setUser((currentUser) =>
+      currentUser
+        ? {
+            ...currentUser,
+            child_profiles: currentUser.child_profiles.filter(
+              (profile) => profile.id !== profileId,
+            ),
+          }
+        : null,
+    )
+    setActiveProfile((currentProfile) => {
+      if (currentProfile?.id !== profileId) {
+        return currentProfile
+      }
+
+      setReaderMode(null)
+      void clearReaderSelection().catch(() => {})
+      return null
+    })
   }, [])
 
   const selectProfile = useCallback((profile: ChildProfile) => {
@@ -160,10 +202,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       readerMode,
+      removeChildProfile,
       refreshUser,
       register,
       selectParent,
       selectProfile,
+      updateChildProfile,
       user,
     }),
     [
@@ -173,10 +217,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
       login,
       logout,
       readerMode,
+      removeChildProfile,
       refreshUser,
       register,
       selectParent,
       selectProfile,
+      updateChildProfile,
       user,
     ],
   )

@@ -16,6 +16,7 @@ type ProfileOptionProps = {
   accessibilityHint?: string
   avatar: ProfileAvatarId
   disabled?: boolean
+  imageUrl?: string | null
   label: string
   onPress?: () => void
   role?: string
@@ -25,6 +26,7 @@ function ProfileOption({
   accessibilityHint = 'Opens this child profile',
   avatar,
   disabled = false,
+  imageUrl = null,
   label,
   onPress,
   role,
@@ -37,7 +39,7 @@ function ProfileOption({
       onPress={onPress}
       style={({ pressed }) => [styles.profileOption, pressed && styles.pressed]}
     >
-      <ProfileAvatar avatar={avatar} size={86} />
+      <ProfileAvatar avatar={avatar} imageUrl={imageUrl} size={86} />
       <Text style={styles.profileName}>{label}</Text>
       {role ? <Text style={styles.profileRole}>{role}</Text> : null}
     </Pressable>
@@ -91,6 +93,7 @@ export default function WhoIsReadingScreen() {
         {user?.child_profiles.map((profile) => (
           <ProfileOption
             avatar={profile.avatar_key}
+            imageUrl={profile.avatar_url}
             key={profile.id}
             label={profile.display_name}
             onPress={() => openProfile(profile)}
@@ -119,7 +122,7 @@ export default function WhoIsReadingScreen() {
 
       <Pressable
         accessibilityRole="button"
-        onPress={() => router.push('/create-profile')}
+        onPress={openParentHome}
         style={({ pressed }) => [styles.manageButton, pressed && styles.pressed]}
       >
         <Text style={styles.manageText}>Manage Profiles</Text>

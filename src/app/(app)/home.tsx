@@ -161,7 +161,11 @@ export default function ChildHomeScreen() {
             onPress={() => router.push('/who-is-reading')}
             style={({ pressed }) => pressed && styles.pressed}
           >
-            <ProfileAvatar avatar={profileAvatar} size={44} />
+            <ProfileAvatar
+              avatar={profileAvatar}
+              imageUrl={activeProfile?.avatar_url}
+              size={44}
+            />
           </Pressable>
         </View>
 
