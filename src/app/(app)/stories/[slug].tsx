@@ -1,13 +1,36 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native'
 
-import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
+import { useAuth } from '@/features/auth/context/auth-context'
+import {
+  ChildAppShell,
+  ParentAppShell,
+} from '@/features/navigation/components/child-app-shell'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { getLocalStory } from '@/features/stories/data/local-stories'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
+
+function StoryShell({ children }: { children: ReactNode }) {
+  const { readerMode } = useAuth()
+
+  return readerMode === 'parent' ? (
+    <ParentAppShell activeTab="stories">{children}</ParentAppShell>
+  ) : (
+    <ChildAppShell activeTab="stories">{children}</ChildAppShell>
+  )
+}
+
+function returnToLibrary() {
+  if (router.canGoBack()) {
+    router.back()
+    return
+  }
+
+  router.navigate('/stories')
+}
 
 export default function StorySummaryScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
@@ -17,20 +40,20 @@ export default function StorySummaryScreen() {
 
   if (!story) {
     return (
-      <ChildAppShell activeTab="stories">
+      <StoryShell>
         <View style={styles.missingState}>
           <Text style={styles.missingTitle}>STORY NOT FOUND</Text>
           <Text style={styles.missingText}>This story is not in the local library yet.</Text>
-          <Pressable onPress={() => router.replace('/stories')} style={styles.returnButton}>
+          <Pressable onPress={returnToLibrary} style={styles.returnButton}>
             <Text style={styles.returnButtonText}>BACK TO STORIES</Text>
           </Pressable>
         </View>
-      </ChildAppShell>
+      </StoryShell>
     )
   }
 
   return (
-    <ChildAppShell activeTab="stories">
+    <StoryShell>
       <ScrollView
         bounces={false}
         contentContainerStyle={styles.scrollContent}
@@ -41,7 +64,7 @@ export default function StorySummaryScreen() {
           <Pressable
             accessibilityLabel="Back to story library"
             accessibilityRole="button"
-            onPress={() => router.replace('/stories')}
+            onPress={returnToLibrary}
             style={({ pressed }) => [styles.roundButton, styles.backButton, pressed && styles.pressed]}
           >
             <SymbolView
@@ -114,7 +137,7 @@ export default function StorySummaryScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </ChildAppShell>
+    </StoryShell>
   )
 }
 

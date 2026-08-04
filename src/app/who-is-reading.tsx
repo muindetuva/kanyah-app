@@ -13,6 +13,7 @@ import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 type ProfileOptionProps = {
+  accessibilityHint?: string
   avatar: ProfileAvatarId
   disabled?: boolean
   label: string
@@ -20,10 +21,17 @@ type ProfileOptionProps = {
   role?: string
 }
 
-function ProfileOption({ avatar, disabled = false, label, onPress, role }: ProfileOptionProps) {
+function ProfileOption({
+  accessibilityHint = 'Opens this child profile',
+  avatar,
+  disabled = false,
+  label,
+  onPress,
+  role,
+}: ProfileOptionProps) {
   return (
     <Pressable
-      accessibilityHint={disabled ? 'Parent home will be added later' : 'Opens this child profile'}
+      accessibilityHint={accessibilityHint}
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
@@ -37,7 +45,7 @@ function ProfileOption({ avatar, disabled = false, label, onPress, role }: Profi
 }
 
 export default function WhoIsReadingScreen() {
-  const { isRestoring, logout, selectProfile, user } = useAuth()
+  const { activeProfile, isRestoring, readerMode, selectParent, selectProfile, user } = useAuth()
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -47,19 +55,30 @@ export default function WhoIsReadingScreen() {
 
   function openProfile(profile: ChildProfile) {
     selectProfile(profile)
-    router.replace('/home')
+    router.dismissTo('/home')
   }
 
-  async function handleLogout() {
-    await logout()
-    router.replace('/')
+  function openParentHome() {
+    selectParent()
+    router.dismissTo('/parent-home')
+  }
+
+  function returnToCurrentReader() {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+
+    router.replace(readerMode === 'parent' ? '/parent-home' : '/home')
   }
 
   const parentName = user?.name.split(' ')[0] ?? 'Parent'
 
   return (
     <AuthShell contentStyle={styles.scrollContent}>
-      <AuthBackButton onPress={() => void handleLogout()} />
+      {readerMode && (readerMode === 'parent' || activeProfile) ? (
+        <AuthBackButton onPress={returnToCurrentReader} />
+      ) : null}
 
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>
@@ -77,7 +96,13 @@ export default function WhoIsReadingScreen() {
             onPress={() => openProfile(profile)}
           />
         ))}
-        <ProfileOption avatar="parent" disabled label={parentName} role="Parent" />
+        <ProfileOption
+          accessibilityHint="Opens the parent dashboard"
+          avatar="parent"
+          label={parentName}
+          onPress={openParentHome}
+          role="Parent"
+        />
 
         <Pressable
           accessibilityLabel="Add profile"

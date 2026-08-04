@@ -57,7 +57,7 @@ export default function CreateProfileScreen() {
         avatar_key: avatar,
       })
       addChildProfile(profile)
-      router.replace('/home')
+      router.dismissTo('/home')
     } catch (submissionError) {
       setError(submissionError)
     } finally {
@@ -67,7 +67,7 @@ export default function CreateProfileScreen() {
 
   return (
     <AuthShell contentStyle={styles.scrollContent}>
-      <AuthBackButton onPress={goBack} />
+      {user?.child_profiles.length ? <AuthBackButton onPress={goBack} /> : null}
 
       <View style={styles.header}>
         <Text accessibilityRole="header" style={styles.title}>

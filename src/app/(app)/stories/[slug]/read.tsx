@@ -61,6 +61,11 @@ export default function StoryReaderScreen() {
   const [pageHeight, setPageHeight] = useState(0)
 
   function returnToSummary() {
+    if (router.canGoBack()) {
+      router.back()
+      return
+    }
+
     router.replace({ pathname: '/stories/[slug]', params: { slug: slug ?? '' } })
   }
 
@@ -83,7 +88,7 @@ export default function StoryReaderScreen() {
             <View style={styles.missingState}>
               <Text style={styles.missingTitle}>STORY NOT FOUND</Text>
               <Text style={styles.missingText}>This story is not in the local library yet.</Text>
-              <Pressable onPress={() => router.replace('/stories')} style={styles.returnButton}>
+              <Pressable onPress={() => router.navigate('/stories')} style={styles.returnButton}>
                 <Text style={styles.returnButtonText}>BACK TO STORIES</Text>
               </Pressable>
             </View>

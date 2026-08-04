@@ -11,7 +11,7 @@ import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
-const jumaArtwork = require('../../assets/images/juma.png')
+const jumaArtwork = require('../../../assets/images/juma.png')
 
 const categories = [
   {
@@ -63,7 +63,7 @@ function SectionHeading({ title }: { title: string }) {
       <Pressable
         accessibilityRole="button"
         hitSlop={8}
-        onPress={() => router.push('/stories')}
+        onPress={() => router.navigate('/stories')}
         style={({ pressed }) => pressed && styles.pressed}
       >
         <Text style={styles.seeAll}>See all</Text>
@@ -76,7 +76,7 @@ function FeaturedStory() {
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.push('/stories')}
+      onPress={() => router.navigate('/stories')}
       style={({ pressed }) => [styles.featuredCard, pressed && styles.pressed]}
     >
       <Image contentFit="cover" source={jumaArtwork} style={styles.featuredImage} />
@@ -110,7 +110,7 @@ function StoryTile({ artwork, title }: { artwork: 'golden' | 'juma'; title: stri
   return (
     <Pressable
       accessibilityRole="button"
-      onPress={() => router.push('/stories')}
+      onPress={() => router.navigate('/stories')}
       style={({ pressed }) => [styles.storyTile, pressed && styles.pressed]}
     >
       <View style={styles.storyArtworkFrame}>
@@ -127,7 +127,7 @@ function StoryTile({ artwork, title }: { artwork: 'golden' | 'juma'; title: stri
 }
 
 export default function ChildHomeScreen() {
-  const { activeProfile, isRestoring, user } = useAuth()
+  const { activeProfile, isRestoring, readerMode, user } = useAuth()
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -135,10 +135,10 @@ export default function ChildHomeScreen() {
       return
     }
 
-    if (!isRestoring && user && !activeProfile) {
+    if (!isRestoring && user && (readerMode !== 'child' || !activeProfile)) {
       router.replace('/who-is-reading')
     }
-  }, [activeProfile, isRestoring, user])
+  }, [activeProfile, isRestoring, readerMode, user])
 
   const profileName = activeProfile?.display_name ?? 'Reader'
   const profileAvatar = activeProfile?.avatar_key ?? 'explorer'
@@ -178,7 +178,7 @@ export default function ChildHomeScreen() {
               <Pressable
                 accessibilityRole="button"
                 key={category.id}
-                onPress={() => router.push('/stories')}
+                onPress={() => router.navigate('/stories')}
                 style={({ pressed }) => [styles.category, pressed && styles.pressed]}
               >
                 <View

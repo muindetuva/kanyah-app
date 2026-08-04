@@ -1,6 +1,6 @@
-import { router } from 'expo-router'
+import { router, type Href } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
@@ -8,8 +8,16 @@ import { MobileFrame } from '@/components/mobile-frame'
 import { appColors, appPalette } from '@/theme/colors'
 
 export type ChildAppTab = 'home' | 'new' | 'profile' | 'stories' | 'watch'
+export type ParentAppTab = 'analytics' | 'home' | 'profile' | 'stories' | 'watch'
 
-const tabs = [
+type NavigationTab = {
+  icon: ComponentProps<typeof SymbolView>['name']
+  id: ChildAppTab | ParentAppTab
+  label: string
+  route?: Href
+}
+
+const childTabs = [
   {
     id: 'home',
     label: 'Home',
@@ -50,13 +58,63 @@ const tabs = [
     },
     route: '/who-is-reading' as const,
   },
-] as const
+] as const satisfies readonly NavigationTab[]
 
-type ChildBottomNavigationProps = {
-  activeTab: ChildAppTab
+const parentTabs = [
+  {
+    id: 'home',
+    label: 'Home',
+    icon: { ios: 'house.fill' as const, android: 'home' as const, web: 'home' as const },
+    route: '/parent-home' as const,
+  },
+  {
+    id: 'watch',
+    label: 'Watch',
+    icon: {
+      ios: 'play.rectangle.fill' as const,
+      android: 'smart_display' as const,
+      web: 'smart_display' as const,
+    },
+  },
+  {
+    id: 'stories',
+    label: 'Stories',
+    icon: {
+      ios: 'book.closed.fill' as const,
+      android: 'menu_book' as const,
+      web: 'menu_book' as const,
+    },
+    route: '/stories' as const,
+  },
+  {
+    id: 'analytics',
+    label: 'Analytics',
+    icon: {
+      ios: 'chart.bar.fill' as const,
+      android: 'bar_chart' as const,
+      web: 'bar_chart' as const,
+    },
+  },
+  {
+    id: 'profile',
+    label: 'Profile',
+    icon: {
+      ios: 'person.crop.circle.fill' as const,
+      android: 'account_circle' as const,
+      web: 'account_circle' as const,
+    },
+    route: '/who-is-reading' as const,
+  },
+] as const satisfies readonly NavigationTab[]
+
+type BottomNavigationProps = {
+  activeTab: ChildAppTab | ParentAppTab
+  mode: 'child' | 'parent'
 }
 
-function ChildBottomNavigation({ activeTab }: ChildBottomNavigationProps) {
+function BottomNavigation({ activeTab, mode }: BottomNavigationProps) {
+  const tabs = mode === 'parent' ? parentTabs : childTabs
+
   return (
     <View accessibilityRole="tablist" style={styles.navigation}>
       {tabs.map((tab) => {
@@ -79,7 +137,11 @@ function ChildBottomNavigation({ activeTab }: ChildBottomNavigationProps) {
             key={tab.id}
             onPress={() => {
               if ('route' in tab) {
-                router.replace(tab.route)
+                if (tab.id === 'profile') {
+                  router.push(tab.route)
+                } else {
+                  router.navigate(tab.route)
+                }
               }
             }}
             style={({ pressed }) => [
@@ -107,12 +169,13 @@ function ChildBottomNavigation({ activeTab }: ChildBottomNavigationProps) {
   )
 }
 
-type ChildAppShellProps = {
-  activeTab: ChildAppTab
+type AppShellProps = {
+  activeTab: ChildAppTab | ParentAppTab
   children: ReactNode
+  mode: 'child' | 'parent'
 }
 
-export function ChildAppShell({ activeTab, children }: ChildAppShellProps) {
+function AppShell({ activeTab, children, mode }: AppShellProps) {
   return (
     <MobileFrame
       backgroundColor={appPalette.colors.neutral[1000]}
@@ -121,10 +184,36 @@ export function ChildAppShell({ activeTab, children }: ChildAppShellProps) {
       <KanyahScreenBackground>
         <SafeAreaView style={styles.safeArea}>
           <View style={styles.content}>{children}</View>
-          <ChildBottomNavigation activeTab={activeTab} />
+          <BottomNavigation activeTab={activeTab} mode={mode} />
         </SafeAreaView>
       </KanyahScreenBackground>
     </MobileFrame>
+  )
+}
+
+type ChildAppShellProps = {
+  activeTab: ChildAppTab
+  children: ReactNode
+}
+
+export function ChildAppShell({ activeTab, children }: ChildAppShellProps) {
+  return (
+    <AppShell activeTab={activeTab} mode="child">
+      {children}
+    </AppShell>
+  )
+}
+
+type ParentAppShellProps = {
+  activeTab: ParentAppTab
+  children: ReactNode
+}
+
+export function ParentAppShell({ activeTab, children }: ParentAppShellProps) {
+  return (
+    <AppShell activeTab={activeTab} mode="parent">
+      {children}
+    </AppShell>
   )
 }
 

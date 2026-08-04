@@ -4,7 +4,10 @@ import { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { useAuth } from '@/features/auth/context/auth-context'
-import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
+import {
+  ChildAppShell,
+  ParentAppShell,
+} from '@/features/navigation/components/child-app-shell'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { type LocalStory, localStories } from '@/features/stories/data/local-stories'
@@ -14,7 +17,7 @@ import { appTypography } from '@/theme/typography'
 const categories = ['Folklore', 'Adventure', 'Mystery', 'Fairy Tales'] as const
 
 function LibraryHeader() {
-  const { activeProfile } = useAuth()
+  const { activeProfile, readerMode } = useAuth()
 
   return (
     <View style={styles.header}>
@@ -41,7 +44,10 @@ function LibraryHeader() {
         onPress={() => router.push('/who-is-reading')}
         style={({ pressed }) => pressed && styles.pressed}
       >
-        <ProfileAvatar avatar={activeProfile?.avatar_key ?? 'paw'} size={44} />
+        <ProfileAvatar
+          avatar={readerMode === 'parent' ? 'parent' : (activeProfile?.avatar_key ?? 'paw')}
+          size={44}
+        />
       </Pressable>
     </View>
   )
@@ -72,6 +78,7 @@ function StoryCard({ story }: { story: LocalStory }) {
 }
 
 export default function StoryLibraryScreen() {
+  const { readerMode } = useAuth()
   const [highlightedCategory, setHighlightedCategory] = useState<string>('Folklore')
   const [search, setSearch] = useState('')
 
@@ -87,8 +94,7 @@ export default function StoryLibraryScreen() {
     )
   }, [search])
 
-  return (
-    <ChildAppShell activeTab="stories">
+  const content = (
       <ScrollView
         bounces={false}
         contentContainerStyle={styles.scrollContent}
@@ -174,7 +180,12 @@ export default function StoryLibraryScreen() {
           ) : null}
         </View>
       </ScrollView>
-    </ChildAppShell>
+  )
+
+  return readerMode === 'parent' ? (
+    <ParentAppShell activeTab="stories">{content}</ParentAppShell>
+  ) : (
+    <ChildAppShell activeTab="stories">{content}</ChildAppShell>
   )
 }
 

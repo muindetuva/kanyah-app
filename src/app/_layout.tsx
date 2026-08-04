@@ -1,4 +1,4 @@
-import { DarkTheme, DefaultTheme, Slot, ThemeProvider } from 'expo-router';
+import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import { useState } from 'react';
 import { useColorScheme } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,7 +13,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <Slot />
+          <Stack screenOptions={{ headerShown: false }} />
         </ThemeProvider>
       </AuthProvider>
     </QueryClientProvider>

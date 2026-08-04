@@ -12,7 +12,14 @@ import {
   getAuthToken,
   setAuthToken,
 } from '@/features/auth/storage/auth-token'
+import {
+  clearReaderSelection,
+  getReaderSelection,
+  setReaderSelection,
+} from '@/features/auth/storage/reader-selection'
 import type { AuthUser, ChildProfile, LoginInput, RegisterInput } from '@/features/auth/types'
+
+export type ReaderMode = 'child' | 'parent'
 
 type AuthContextValue = {
   activeProfile: ChildProfile | null
@@ -20,17 +27,24 @@ type AuthContextValue = {
   isRestoring: boolean
   login: (input: LoginInput) => Promise<AuthUser>
   logout: () => Promise<void>
+  readerMode: ReaderMode | null
   refreshUser: () => Promise<AuthUser>
   register: (input: RegisterInput) => Promise<AuthUser>
+  selectParent: () => void
   selectProfile: (profile: ChildProfile) => void
   user: AuthUser | null
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function persistReaderSelection(selection: Parameters<typeof setReaderSelection>[0]) {
+  void setReaderSelection(selection).catch(() => {})
+}
+
 export function AuthProvider({ children }: PropsWithChildren) {
   const [activeProfile, setActiveProfile] = useState<ChildProfile | null>(null)
   const [isRestoring, setIsRestoring] = useState(true)
+  const [readerMode, setReaderMode] = useState<ReaderMode | null>(null)
   const [user, setUser] = useState<AuthUser | null>(null)
 
   useEffect(() => {
@@ -43,9 +57,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       try {
-        setUser(await getCurrentUser())
+        const [currentUser, savedSelection] = await Promise.all([
+          getCurrentUser(),
+          getReaderSelection(),
+        ])
+
+        setUser(currentUser)
+
+        if (savedSelection?.mode === 'parent') {
+          setReaderMode('parent')
+        } else if (savedSelection?.mode === 'child') {
+          const savedProfile = currentUser.child_profiles.find(
+            (profile) => profile.id === savedSelection.profileId,
+          )
+
+          if (savedProfile) {
+            setActiveProfile(savedProfile)
+            setReaderMode('child')
+          } else {
+            await clearReaderSelection()
+          }
+        }
       } catch {
-        await clearAuthToken()
+        await Promise.all([clearAuthToken(), clearReaderSelection()])
       } finally {
         setIsRestoring(false)
       }
@@ -56,8 +90,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const authenticate = useCallback(async (request: Promise<{ token: string; user: AuthUser }>) => {
     const response = await request
-    await setAuthToken(response.token)
+    await Promise.all([setAuthToken(response.token), clearReaderSelection()])
     setActiveProfile(null)
+    setReaderMode(null)
     setUser(response.user)
     return response.user
   }, [])
@@ -90,14 +125,29 @@ export function AuthProvider({ children }: PropsWithChildren) {
         : null,
     )
     setActiveProfile(profile)
+    setReaderMode('child')
+    persistReaderSelection({ mode: 'child', profileId: profile.id })
+  }, [])
+
+  const selectProfile = useCallback((profile: ChildProfile) => {
+    setActiveProfile(profile)
+    setReaderMode('child')
+    persistReaderSelection({ mode: 'child', profileId: profile.id })
+  }, [])
+
+  const selectParent = useCallback(() => {
+    setActiveProfile(null)
+    setReaderMode('parent')
+    persistReaderSelection({ mode: 'parent' })
   }, [])
 
   const logout = useCallback(async () => {
     try {
       await requestLogout()
     } finally {
-      await clearAuthToken()
+      await Promise.all([clearAuthToken(), clearReaderSelection()])
       setActiveProfile(null)
+      setReaderMode(null)
       setUser(null)
     }
   }, [])
@@ -109,12 +159,26 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isRestoring,
       login,
       logout,
+      readerMode,
       refreshUser,
       register,
-      selectProfile: setActiveProfile,
+      selectParent,
+      selectProfile,
       user,
     }),
-    [activeProfile, addChildProfile, isRestoring, login, logout, refreshUser, register, user],
+    [
+      activeProfile,
+      addChildProfile,
+      isRestoring,
+      login,
+      logout,
+      readerMode,
+      refreshUser,
+      register,
+      selectParent,
+      selectProfile,
+      user,
+    ],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

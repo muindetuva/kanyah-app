@@ -45,7 +45,8 @@ export default function SignUpScreen() {
         password_confirmation: confirmPassword,
         terms: agreedToTerms,
       })
-      router.push('/create-profile')
+      router.dismissAll()
+      router.replace('/create-profile')
     } catch (submissionError) {
       setError(submissionError)
     } finally {
