@@ -2,12 +2,13 @@ import type { ApiResource } from '@/features/auth/types'
 import type {
   Category,
   PaginatedStories,
+  ReadingSession,
   Story,
   StoryCard,
   StoryFilters,
   StoryProgress,
 } from '@/features/stories/types'
-import { apiGet, apiPut } from '@/lib/api/client'
+import { apiGet, apiPost, apiPut } from '@/lib/api/client'
 
 function storyQueryString(filters: StoryFilters): string {
   const params: string[] = []
@@ -73,6 +74,31 @@ export async function updateStoryProgress(
   const response = await apiPut<ApiResource<StoryProgress>>(
     `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/progress`,
     { card_id: cardId },
+    true,
+  )
+  return response.data
+}
+
+export async function startReadingSession(
+  childProfileId: number,
+  slug: string,
+): Promise<ReadingSession> {
+  const response = await apiPost<ApiResource<ReadingSession>>(
+    `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/reading-sessions`,
+    undefined,
+    true,
+  )
+  return response.data
+}
+
+export async function updateReadingSession(
+  sessionId: number,
+  activeSeconds: number,
+  ended = false,
+): Promise<ReadingSession> {
+  const response = await apiPut<ApiResource<ReadingSession>>(
+    `/api/v1/reading-sessions/${sessionId}`,
+    { active_seconds: activeSeconds, ended },
     true,
   )
   return response.data

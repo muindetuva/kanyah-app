@@ -16,6 +16,7 @@ import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
+import { useReadingSession } from '@/features/stories/hooks/use-reading-session'
 import {
   useStory,
   useStoryCards,
@@ -66,6 +67,11 @@ export default function StoryReaderScreen() {
   const { mutate: updateProgress } = useUpdateStoryProgress(trackingProfileId, slug)
   const story = storyQuery.data
   const cards = cardsQuery.data
+  useReadingSession({
+    childProfileId: trackingProfileId,
+    enabled: Boolean(story && cards?.length),
+    slug,
+  })
   const [pageHeight, setPageHeight] = useState(0)
   const [activePage, setActivePage] = useState(0)
   const lastTrackedCardId = useRef<number | null>(null)

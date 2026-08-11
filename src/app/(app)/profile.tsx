@@ -1,16 +1,19 @@
 import { router } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
+import { Image } from 'expo-image'
 import { useEffect } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { useAuth } from '@/features/auth/context/auth-context'
 import { ChildAppShell } from '@/features/navigation/components/child-app-shell'
 import { ProfileAvatar } from '@/features/profiles/components/profile-avatar'
+import { useProfileBadges } from '@/features/profiles/hooks/use-profile-badges'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 export default function ChildProfileScreen() {
   const { activeProfile, isRestoring, readerMode, user } = useAuth()
+  const badgesQuery = useProfileBadges(activeProfile?.id)
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -46,19 +49,72 @@ export default function ChildProfileScreen() {
           </Text>
         </View>
 
-        <View style={styles.comingSoonCard}>
-          <SymbolView
-            name={{ ios: 'medal.fill', android: 'military_tech', web: 'military_tech' }}
-            size={28}
-            tintColor={appPalette.colors.primary[500]}
-          />
-          <View style={styles.comingSoonCopy}>
-            <Text style={styles.comingSoonTitle}>YOUR JOURNEY STARTS HERE</Text>
-            <Text style={styles.comingSoonBody}>
-              Finish stories to begin building your history and achievements.
-            </Text>
-          </View>
+        <View style={styles.sectionHeading}>
+          <Text style={styles.sectionTitle}>MY BADGES</Text>
+          <Text style={styles.badgeCount}>
+            {(badgesQuery.data ?? []).filter((badge) => badge.earned).length} /{' '}
+            {badgesQuery.data?.length ?? 0}
+          </Text>
         </View>
+
+        {badgesQuery.isError ? (
+          <View style={styles.messageCard}>
+            <Text style={styles.messageTitle}>BADGES COULDN&apos;T LOAD</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => badgesQuery.refetch()}
+              style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.retryText}>TRY AGAIN</Text>
+            </Pressable>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            contentContainerStyle={styles.badgeList}
+            showsHorizontalScrollIndicator={false}
+          >
+            {(badgesQuery.data ?? []).map((badge) => (
+              <View
+                accessibilityLabel={`${badge.name}. ${badge.earned ? 'Earned' : badge.description}`}
+                key={badge.id}
+                style={[styles.badgeCard, !badge.earned && styles.badgeCardLocked]}
+              >
+                <View style={styles.badgeArtworkFrame}>
+                  {badge.artworkUrl ? (
+                    <Image
+                      accessibilityLabel=""
+                      contentFit="cover"
+                      source={{ uri: badge.artworkUrl }}
+                      style={styles.badgeArtwork}
+                    />
+                  ) : (
+                    <SymbolView
+                      name={{ ios: 'medal.fill', android: 'military_tech', web: 'military_tech' }}
+                      size={42}
+                      tintColor={appPalette.colors.primary[500]}
+                    />
+                  )}
+                  {!badge.earned && (
+                    <View style={styles.lockOverlay}>
+                      <SymbolView
+                        name={{ ios: 'lock.fill', android: 'lock', web: 'lock' }}
+                        size={23}
+                        tintColor={appColors.text.onPrimary}
+                      />
+                    </View>
+                  )}
+                </View>
+                <Text numberOfLines={2} style={styles.badgeName}>
+                  {badge.name.toUpperCase()}
+                </Text>
+                <Text numberOfLines={2} style={styles.badgeDescription}>
+                  {badge.earned ? 'Earned!' : badge.description}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
+        )}
 
         <Pressable
           accessibilityHint="Requires the Parent PIN on shared and child devices"
@@ -121,30 +177,101 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'center',
   },
-  comingSoonCard: {
+  sectionHeading: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 14,
+    justifyContent: 'space-between',
     marginTop: 34,
-    padding: 18,
+  },
+  sectionTitle: {
+    color: appColors.text.primary,
+    fontSize: 20,
+    fontWeight: '900',
+    lineHeight: 26,
+  },
+  badgeCount: {
+    color: appPalette.colors.purple[400],
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  badgeList: {
+    gap: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  badgeCard: {
+    width: 128,
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 14,
     borderRadius: 20,
     backgroundColor: appPalette.grays.white,
     boxShadow: '0 8px 18px rgba(90, 52, 28, 0.1)',
   },
-  comingSoonCopy: {
-    flex: 1,
+  badgeCardLocked: {
+    opacity: 0.72,
   },
-  comingSoonTitle: {
+  badgeArtworkFrame: {
+    width: 78,
+    height: 78,
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 39,
+    backgroundColor: appPalette.colors.neutral[100],
+  },
+  badgeArtwork: {
+    width: '100%',
+    height: '100%',
+  },
+  lockOverlay: {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(34, 19, 55, 0.54)',
+  },
+  badgeName: {
+    minHeight: 34,
+    marginTop: 10,
     color: appColors.text.primary,
-    fontSize: 14,
-    fontWeight: '900',
-    lineHeight: 19,
-  },
-  comingSoonBody: {
-    marginTop: 3,
-    color: appColors.text.secondary,
+    fontFamily: appTypography.displayFont,
     fontSize: 13,
-    lineHeight: 19,
+    fontWeight: '900',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  badgeDescription: {
+    minHeight: 30,
+    marginTop: 4,
+    color: appColors.text.secondary,
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: 'center',
+  },
+  messageCard: {
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 18,
+    borderRadius: 20,
+    backgroundColor: appPalette.grays.white,
+  },
+  messageTitle: {
+    color: appColors.text.primary,
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  retryButton: {
+    marginTop: 10,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 18,
+    backgroundColor: appColors.actions.primary,
+  },
+  retryText: {
+    color: appColors.text.onPrimary,
+    fontSize: 12,
+    fontWeight: '900',
   },
   parentButton: {
     minHeight: 76,

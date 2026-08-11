@@ -6,7 +6,8 @@ import type {
   ChildProfile,
   CreateChildProfileInput,
 } from '@/features/auth/types'
-import { apiDelete, apiPost } from '@/lib/api/client'
+import type { Badge } from '@/features/profiles/types'
+import { apiDelete, apiGet, apiPost } from '@/lib/api/client'
 
 export type ChildProfileFormInput = CreateChildProfileInput & {
   avatar?: ImagePickerAsset | null
@@ -87,4 +88,13 @@ export async function updateChildProfile(
 
 export async function deleteChildProfile(profileId: number): Promise<void> {
   await apiDelete<void>(`/api/v1/child-profiles/${profileId}`, true)
+}
+
+export async function getChildProfileBadges(profileId: number): Promise<Badge[]> {
+  const response = await apiGet<ApiResource<Badge[]>>(
+    `/api/v1/child-profiles/${profileId}/badges`,
+    true,
+  )
+
+  return response.data
 }

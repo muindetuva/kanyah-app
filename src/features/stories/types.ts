@@ -45,6 +45,16 @@ export type StoryProgress = {
   storyId: number
 }
 
+export type ReadingSession = {
+  activeSeconds: number
+  childProfileId: number
+  endedAt: string | null
+  id: number
+  lastActivityAt: string
+  startedAt: string
+  storyId: number
+}
+
 export type Category = StoryCategory & {
   artwork: StoryImage | null
   featuredStory: Story | null
