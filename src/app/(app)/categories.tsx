@@ -84,7 +84,7 @@ function CategoryCard({ category }: { category: Category }) {
 }
 
 export default function CategoriesScreen() {
-  const { activeProfile, readerMode } = useAuth()
+  const { activeProfile, deviceMode, readerMode } = useAuth()
   const categoriesQuery = useCategories()
   const categories = categoriesQuery.data ?? []
 
@@ -107,7 +107,13 @@ export default function CategoriesScreen() {
           accessibilityLabel="Switch profile"
           accessibilityRole="button"
           hitSlop={8}
-          onPress={() => router.push('/who-is-reading')}
+          onPress={() =>
+            router.push(
+              deviceMode === 'child' && readerMode !== 'parent'
+                ? '/parent-unlock'
+                : '/who-is-reading',
+            )
+          }
           style={({ pressed }) => pressed && styles.pressed}
         >
           <ProfileAvatar

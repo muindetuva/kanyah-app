@@ -24,7 +24,7 @@ function buildApiUrl(path: string) {
 type ApiRequestOptions = {
   authenticated?: boolean
   body?: unknown
-  method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 }
 
 async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
@@ -82,6 +82,14 @@ export function apiGet<T>(path: string, authenticated = false): Promise<T> {
 export function apiPost<T>(path: string, body?: unknown, authenticated = false): Promise<T> {
   return apiRequest<T>(path, {
     method: 'POST',
+    body,
+    authenticated,
+  })
+}
+
+export function apiPut<T>(path: string, body?: unknown, authenticated = false): Promise<T> {
+  return apiRequest<T>(path, {
+    method: 'PUT',
     body,
     authenticated,
   })

@@ -20,7 +20,7 @@ import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 function LibraryHeader() {
-  const { activeProfile, readerMode } = useAuth()
+  const { activeProfile, deviceMode, readerMode } = useAuth()
 
   return (
     <View style={styles.header}>
@@ -44,7 +44,13 @@ function LibraryHeader() {
         accessibilityLabel="Switch profile"
         accessibilityRole="button"
         hitSlop={8}
-        onPress={() => router.push('/who-is-reading')}
+        onPress={() =>
+          router.push(
+            deviceMode === 'child' && readerMode !== 'parent'
+              ? '/parent-unlock'
+              : '/who-is-reading',
+          )
+        }
         style={({ pressed }) => pressed && styles.pressed}
       >
         <ProfileAvatar

@@ -15,6 +15,7 @@ export type AuthUser = {
   name: string
   phone: string
   role: 'parent'
+  has_parent_pin: boolean
   child_profiles: ChildProfile[]
 }
 

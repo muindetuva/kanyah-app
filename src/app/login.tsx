@@ -35,9 +35,8 @@ export default function LoginScreen() {
     setIsSubmitting(true)
 
     try {
-      const user = await login({ phone, password })
-      router.dismissAll()
-      router.replace(user.child_profiles.length === 0 ? '/create-profile' : '/who-is-reading')
+      await login({ phone, password })
+      router.replace('/')
     } catch (submissionError) {
       setError(submissionError)
     } finally {

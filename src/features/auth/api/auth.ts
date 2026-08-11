@@ -5,7 +5,7 @@ import type {
   LoginInput,
   RegisterInput,
 } from '@/features/auth/types'
-import { apiGet, apiPost } from '@/lib/api/client'
+import { apiGet, apiPost, apiPut } from '@/lib/api/client'
 
 export function register(input: RegisterInput): Promise<AuthResponse> {
   return apiPost<AuthResponse>('/api/v1/auth/register', input)
@@ -22,4 +22,24 @@ export async function logout(): Promise<void> {
 export async function getCurrentUser(): Promise<AuthUser> {
   const response = await apiGet<ApiResource<AuthUser>>('/api/v1/auth/me', true)
   return response.data
+}
+
+export async function storeParentPin(pin: string, pinConfirmation: string): Promise<void> {
+  await apiPut<{ has_parent_pin: true; message: string }>(
+    '/api/v1/auth/parent-pin',
+    { pin, pin_confirmation: pinConfirmation },
+    true,
+  )
+}
+
+export async function verifyParentPin(pin: string): Promise<void> {
+  await apiPost<{ verified: true }>('/api/v1/auth/parent-pin/verify', { pin }, true)
+}
+
+export async function verifyParentPassword(password: string): Promise<void> {
+  await apiPost<{ verified: true }>(
+    '/api/v1/auth/parent-password/verify',
+    { password },
+    true,
+  )
 }

@@ -47,13 +47,23 @@ function ProfileOption({
 }
 
 export default function WhoIsReadingScreen() {
-  const { activeProfile, isRestoring, readerMode, selectParent, selectProfile, user } = useAuth()
+  const {
+    activeProfile,
+    deviceMode,
+    isRestoring,
+    readerMode,
+    selectParent,
+    selectProfile,
+    user,
+  } = useAuth()
 
   useEffect(() => {
     if (!isRestoring && !user) {
       router.replace('/login')
+    } else if (!isRestoring && user && deviceMode === 'child' && readerMode !== 'parent') {
+      router.replace(activeProfile ? '/home' : '/device-setup')
     }
-  }, [isRestoring, user])
+  }, [activeProfile, deviceMode, isRestoring, readerMode, user])
 
   function openProfile(profile: ChildProfile) {
     selectProfile(profile)
@@ -61,8 +71,27 @@ export default function WhoIsReadingScreen() {
   }
 
   function openParentHome() {
+    if (deviceMode !== 'parent' && user?.has_parent_pin) {
+      router.push('/parent-unlock')
+      return
+    }
+
+    if (deviceMode !== 'parent' && !user?.has_parent_pin) {
+      router.push('/parent-pin')
+      return
+    }
+
     selectParent()
     router.dismissTo('/parent-home')
+  }
+
+  function addProfile() {
+    if (deviceMode !== 'parent') {
+      router.push({ pathname: '/parent-unlock', params: { next: 'create-profile' } })
+      return
+    }
+
+    router.push('/create-profile')
   }
 
   function returnToCurrentReader() {
@@ -75,6 +104,10 @@ export default function WhoIsReadingScreen() {
   }
 
   const parentName = user?.name.split(' ')[0] ?? 'Parent'
+
+  if (deviceMode === 'child' && readerMode !== 'parent') {
+    return null
+  }
 
   return (
     <AuthShell contentStyle={styles.scrollContent}>
@@ -110,7 +143,7 @@ export default function WhoIsReadingScreen() {
         <Pressable
           accessibilityLabel="Add profile"
           accessibilityRole="button"
-          onPress={() => router.push('/create-profile')}
+          onPress={addProfile}
           style={({ pressed }) => [styles.profileOption, pressed && styles.pressed]}
         >
           <View style={styles.addAvatar}>

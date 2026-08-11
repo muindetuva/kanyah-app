@@ -128,7 +128,7 @@ function StoryTile({ story }: { story: Story }) {
 }
 
 export default function ChildHomeScreen() {
-  const { activeProfile, isRestoring, readerMode, user } = useAuth()
+  const { activeProfile, deviceMode, isRestoring, readerMode, user } = useAuth()
   const categoriesQuery = useCategories()
   const storiesQuery = useStories({ perPage: 8 })
 
@@ -164,7 +164,9 @@ export default function ChildHomeScreen() {
             accessibilityLabel="Switch profile"
             accessibilityRole="button"
             hitSlop={8}
-            onPress={() => router.push('/who-is-reading')}
+            onPress={() =>
+              router.push(deviceMode === 'child' ? '/parent-unlock' : '/who-is-reading')
+            }
             style={({ pressed }) => pressed && styles.pressed}
           >
             <ProfileAvatar

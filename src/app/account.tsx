@@ -17,7 +17,7 @@ function goBack() {
 }
 
 export default function AccountScreen() {
-  const { isRestoring, logout, readerMode, user } = useAuth()
+  const { deviceMode, isRestoring, logout, readerMode, user } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   useEffect(() => {
@@ -34,11 +34,17 @@ export default function AccountScreen() {
     } catch {
       // Local credentials are cleared even when the server cannot be reached.
     } finally {
-      router.dismissAll()
       router.replace('/')
       setIsLoggingOut(false)
     }
   }
+
+  const deviceModeLabel =
+    deviceMode === 'child'
+      ? 'Child’s device'
+      : deviceMode === 'shared'
+        ? 'Shared family device'
+        : 'Parent device'
 
   return (
     <AuthShell contentStyle={styles.content}>
@@ -60,6 +66,20 @@ export default function AccountScreen() {
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>PHONE NUMBER</Text>
           <Text style={styles.detailValue}>{user?.phone}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.deviceRow}>
+          <View style={styles.deviceCopy}>
+            <Text style={styles.detailLabel}>THIS DEVICE</Text>
+            <Text style={styles.detailValue}>{deviceModeLabel}</Text>
+          </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.push('/device-setup')}
+            style={({ pressed }) => pressed && styles.pressed}
+          >
+            <Text style={styles.changeDeviceLabel}>CHANGE</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -124,6 +144,23 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     lineHeight: 24,
+  },
+  deviceRow: {
+    minHeight: 78,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  deviceCopy: {
+    flex: 1,
+    gap: 5,
+  },
+  changeDeviceLabel: {
+    color: appColors.actions.secondary,
+    fontSize: 13,
+    fontWeight: '800',
+    lineHeight: 18,
   },
   divider: {
     height: StyleSheet.hairlineWidth,

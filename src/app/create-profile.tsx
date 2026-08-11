@@ -20,7 +20,7 @@ function goBack() {
 export default function CreateProfileScreen() {
   const [error, setError] = useState<unknown>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const { addChildProfile, isRestoring, readerMode, user } = useAuth()
+  const { addChildProfile, configureDevice, deviceMode, isRestoring, readerMode, user } = useAuth()
   const isParentFlow = readerMode === 'parent'
 
   useEffect(() => {
@@ -40,6 +40,23 @@ export default function CreateProfileScreen() {
 
     try {
       const profile = await createChildProfile(input)
+
+      if (user?.child_profiles.length === 0 && deviceMode) {
+        addChildProfile(profile, { select: false })
+        await configureDevice(deviceMode, deviceMode === 'child' ? profile : null)
+
+        if (deviceMode === 'parent') {
+          router.replace('/parent-home')
+        } else if (!user.has_parent_pin) {
+          router.replace('/parent-pin')
+        } else if (deviceMode === 'shared') {
+          router.replace('/shared-device-ready')
+        } else {
+          router.replace('/home')
+        }
+        return
+      }
+
       addChildProfile(profile, { select: !isParentFlow })
       router.dismissTo(isParentFlow ? '/parent-home' : '/home')
     } catch (submissionError) {

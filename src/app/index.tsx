@@ -14,22 +14,26 @@ const verticalLogo = require('../../assets/images/kanyah-vertical-logo.svg')
 
 export default function WelcomeScreen() {
   const { height } = useWindowDimensions()
-  const { activeProfile, isRestoring, readerMode, user } = useAuth()
+  const { activeProfile, deviceMode, deviceProfileId, isRestoring, readerMode, user } = useAuth()
   const isCompact = height < 760
 
   useEffect(() => {
     if (!isRestoring && user) {
-      if (user.child_profiles.length === 0) {
+      if (!deviceMode) {
+        router.replace('/device-setup')
+      } else if (user.child_profiles.length === 0) {
         router.replace('/create-profile')
-      } else if (readerMode === 'parent') {
+      } else if (deviceMode === 'parent' || readerMode === 'parent') {
         router.replace('/parent-home')
-      } else if (readerMode === 'child' && activeProfile) {
+      } else if (deviceMode === 'child' && deviceProfileId && activeProfile) {
         router.replace('/home')
-      } else {
+      } else if (deviceMode === 'shared') {
         router.replace('/who-is-reading')
+      } else {
+        router.replace('/device-setup')
       }
     }
-  }, [activeProfile, isRestoring, readerMode, user])
+  }, [activeProfile, deviceMode, deviceProfileId, isRestoring, readerMode, user])
 
   return (
     <MobileFrame
