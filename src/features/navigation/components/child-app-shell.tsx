@@ -5,10 +5,9 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View } from 'react-native'
 
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
-import { useAuth } from '@/features/auth/context/auth-context'
 import { appColors, appPalette } from '@/theme/colors'
 
-export type ChildAppTab = 'home' | 'new' | 'profile' | 'stories' | 'watch'
+export type ChildAppTab = 'discover' | 'home' | 'profile' | 'stories' | 'watch'
 export type ParentAppTab = 'analytics' | 'home' | 'profile' | 'stories' | 'watch'
 
 type NavigationTab = {
@@ -33,6 +32,7 @@ const childTabs = [
       android: 'smart_display' as const,
       web: 'smart_display' as const,
     },
+    route: '/watch' as const,
   },
   {
     id: 'stories',
@@ -45,9 +45,10 @@ const childTabs = [
     route: '/stories' as const,
   },
   {
-    id: 'new',
-    label: 'New',
+    id: 'discover',
+    label: 'Discover',
     icon: { ios: 'star.fill' as const, android: 'star' as const, web: 'star' as const },
+    route: '/discover' as const,
   },
   {
     id: 'profile',
@@ -57,7 +58,7 @@ const childTabs = [
       android: 'mood' as const,
       web: 'mood' as const,
     },
-    route: '/who-is-reading' as const,
+    route: '/profile' as const,
   },
 ] as const satisfies readonly NavigationTab[]
 
@@ -76,6 +77,7 @@ const parentTabs = [
       android: 'smart_display' as const,
       web: 'smart_display' as const,
     },
+    route: '/watch' as const,
   },
   {
     id: 'stories',
@@ -95,6 +97,7 @@ const parentTabs = [
       android: 'bar_chart' as const,
       web: 'bar_chart' as const,
     },
+    route: '/analytics' as const,
   },
   {
     id: 'profile',
@@ -104,7 +107,7 @@ const parentTabs = [
       android: 'account_circle' as const,
       web: 'account_circle' as const,
     },
-    route: '/who-is-reading' as const,
+    route: '/account' as const,
   },
 ] as const satisfies readonly NavigationTab[]
 
@@ -114,7 +117,6 @@ type BottomNavigationProps = {
 }
 
 function BottomNavigation({ activeTab, mode }: BottomNavigationProps) {
-  const { deviceMode } = useAuth()
   const tabs = mode === 'parent' ? parentTabs : childTabs
 
   return (
@@ -122,36 +124,20 @@ function BottomNavigation({ activeTab, mode }: BottomNavigationProps) {
       {tabs.map((tab) => {
         const active = tab.id === activeTab
         const central = tab.id === 'stories'
-        const disabled = !('route' in tab)
-        const isLockedParentAccess =
-          mode === 'child' && deviceMode === 'child' && tab.id === 'profile'
-        const icon = isLockedParentAccess
-          ? { ios: 'lock.fill' as const, android: 'lock' as const, web: 'lock' as const }
-          : tab.icon
-        const label = isLockedParentAccess ? 'Parent' : tab.label
         const iconColor = central
           ? appColors.text.onPrimary
           : active
             ? appPalette.colors.yellow[100]
-            : tab.id === 'new'
+            : tab.id === 'discover'
               ? appPalette.colors.magenta[300]
               : appPalette.colors.purple[100]
 
         return (
           <Pressable
             accessibilityRole="tab"
-            accessibilityState={{ disabled, selected: active }}
-            disabled={disabled}
+            accessibilityState={{ selected: active }}
             key={tab.id}
-            onPress={() => {
-              if ('route' in tab) {
-                if (tab.id === 'profile') {
-                  router.push(isLockedParentAccess ? '/parent-unlock' : tab.route)
-                } else {
-                  router.navigate(tab.route)
-                }
-              }
-            }}
+            onPress={() => router.navigate(tab.route)}
             style={({ pressed }) => [
               styles.tab,
               central && styles.centralTab,
@@ -159,7 +145,7 @@ function BottomNavigation({ activeTab, mode }: BottomNavigationProps) {
             ]}
           >
             <View style={[styles.iconFrame, central && styles.centralIconFrame]}>
-              <SymbolView name={icon} size={central ? 29 : 23} tintColor={iconColor} />
+              <SymbolView name={tab.icon} size={central ? 29 : 23} tintColor={iconColor} />
             </View>
             <Text
               style={[
@@ -168,7 +154,7 @@ function BottomNavigation({ activeTab, mode }: BottomNavigationProps) {
                 central && styles.centralTabLabel,
               ]}
             >
-              {label}
+              {tab.label}
             </Text>
           </Pressable>
         )

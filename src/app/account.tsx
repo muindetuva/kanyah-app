@@ -1,20 +1,11 @@
 import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
-import { AuthBackButton, AuthShell } from '@/features/auth/components/auth-ui'
 import { useAuth } from '@/features/auth/context/auth-context'
+import { ParentAppShell } from '@/features/navigation/components/child-app-shell'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
-
-function goBack() {
-  if (router.canGoBack()) {
-    router.back()
-    return
-  }
-
-  router.replace('/parent-home')
-}
 
 export default function AccountScreen() {
   const { deviceMode, isRestoring, logout, readerMode, user } = useAuth()
@@ -47,63 +38,66 @@ export default function AccountScreen() {
         : 'Parent device'
 
   return (
-    <AuthShell contentStyle={styles.content}>
-      <AuthBackButton onPress={goBack} />
-
-      <View style={styles.header}>
-        <Text accessibilityRole="header" style={styles.title}>
-          YOUR ACCOUNT
-        </Text>
-        <Text style={styles.subtitle}>Manage the parent account for this family.</Text>
-      </View>
-
-      <View style={styles.card}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>NAME</Text>
-          <Text style={styles.detailValue}>{user?.name}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>PHONE NUMBER</Text>
-          <Text style={styles.detailValue}>{user?.phone}</Text>
-        </View>
-        <View style={styles.divider} />
-        <View style={styles.deviceRow}>
-          <View style={styles.deviceCopy}>
-            <Text style={styles.detailLabel}>THIS DEVICE</Text>
-            <Text style={styles.detailValue}>{deviceModeLabel}</Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => router.push('/device-setup')}
-            style={({ pressed }) => pressed && styles.pressed}
-          >
-            <Text style={styles.changeDeviceLabel}>CHANGE</Text>
-          </Pressable>
-        </View>
-      </View>
-
-      <Pressable
-        accessibilityRole="button"
-        disabled={isLoggingOut}
-        onPress={() => void handleLogout()}
-        style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
+    <ParentAppShell activeTab="profile">
+      <ScrollView
+        bounces={false}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.logoutLabel}>{isLoggingOut ? 'LOGGING OUT…' : 'LOG OUT'}</Text>
-      </Pressable>
-    </AuthShell>
+        <View style={styles.header}>
+          <Text accessibilityRole="header" style={styles.title}>
+            PARENT PROFILE
+          </Text>
+          <Text style={styles.subtitle}>Manage your account and this device.</Text>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>NAME</Text>
+            <Text style={styles.detailValue}>{user?.name}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>PHONE NUMBER</Text>
+            <Text style={styles.detailValue}>{user?.phone}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.deviceRow}>
+            <View style={styles.deviceCopy}>
+              <Text style={styles.detailLabel}>THIS DEVICE</Text>
+              <Text style={styles.detailValue}>{deviceModeLabel}</Text>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/device-setup')}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.changeDeviceLabel}>CHANGE</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <Pressable
+          accessibilityRole="button"
+          disabled={isLoggingOut}
+          onPress={() => void handleLogout()}
+          style={({ pressed }) => [styles.logoutButton, pressed && styles.pressed]}
+        >
+          <Text style={styles.logoutLabel}>{isLoggingOut ? 'LOGGING OUT…' : 'LOG OUT'}</Text>
+        </Pressable>
+      </ScrollView>
+    </ParentAppShell>
   )
 }
 
 const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 32,
+    paddingTop: 34,
+    paddingBottom: 126,
   },
   header: {
     alignItems: 'center',
-    marginTop: 48,
   },
   title: {
     color: appColors.text.primary,
