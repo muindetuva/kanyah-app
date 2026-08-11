@@ -51,7 +51,7 @@ export default function WelcomeScreen() {
                 accessibilityRole="header"
                 style={[styles.headline, isCompact && styles.headlineCompact]}
               >
-                STORIES{`\n`}THAT LIVE{`\n`}WITH YOU
+                IMAGINE{`\n`}MORE
               </Text>
             </View>
 

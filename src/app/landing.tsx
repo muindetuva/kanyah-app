@@ -302,16 +302,7 @@ export default function HomeScreen() {
                         !isWideDesktop && styles.headlineCompactDesktop,
                       ]}
                     >
-                      STORIES THAT
-                    </Text>
-                    <Text
-                      style={[
-                        styles.headline,
-                        styles.headlineDesktop,
-                        !isWideDesktop && styles.headlineCompactDesktop,
-                      ]}
-                    >
-                      LIVE WITH YOU
+                      IMAGINE
                     </Text>
                     <Text
                       style={[
@@ -321,7 +312,7 @@ export default function HomeScreen() {
                         styles.headlineAccent,
                       ]}
                     >
-                      FOREVER
+                      MORE
                     </Text>
                   </View>
                 ) : (
@@ -331,14 +322,18 @@ export default function HomeScreen() {
                       numberOfLines={1}
                       style={[styles.headline, isTablet && styles.headlineTablet]}
                     >
-                      STORIES THAT LIVE
+                      IMAGINE
                     </Text>
                     <Text
                       adjustsFontSizeToFit
                       numberOfLines={1}
-                      style={[styles.headline, isTablet && styles.headlineTablet]}
+                      style={[
+                        styles.headline,
+                        isTablet && styles.headlineTablet,
+                        styles.headlineAccent,
+                      ]}
                     >
-                      WITH YOU <Text style={styles.headlineAccent}>FOREVER</Text>
+                      MORE
                     </Text>
                   </View>
                 )}
