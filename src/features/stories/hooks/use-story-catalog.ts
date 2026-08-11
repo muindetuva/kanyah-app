@@ -1,10 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
   getCategories,
   getStories,
   getStory,
   getStoryCards,
+  getStoryProgress,
+  updateStoryProgress,
 } from '@/features/stories/api/stories'
 import type { StoryFilters } from '@/features/stories/types'
 
@@ -47,5 +49,30 @@ export function useStoryCards(slug: string | undefined) {
     queryFn: () => getStoryCards(slug!),
     enabled: Boolean(slug),
     staleTime: catalogStaleTime,
+  })
+}
+
+export function useStoryProgress(childProfileId: number | undefined, slug: string | undefined) {
+  return useQuery({
+    queryKey: ['story-progress', childProfileId ?? 0, slug ?? ''],
+    queryFn: () => getStoryProgress(childProfileId!, slug!),
+    enabled: Boolean(childProfileId && slug),
+  })
+}
+
+export function useUpdateStoryProgress(
+  childProfileId: number | undefined,
+  slug: string | undefined,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (cardId: number) => updateStoryProgress(childProfileId!, slug!, cardId),
+    onSuccess: (progress) => {
+      queryClient.setQueryData(
+        ['story-progress', childProfileId ?? 0, slug ?? ''],
+        progress,
+      )
+    },
   })
 }

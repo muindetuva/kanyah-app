@@ -32,6 +32,19 @@ export type StoryCard = {
   position: number
 }
 
+export type StoryProgress = {
+  childProfileId: number
+  completedAt: string | null
+  currentCardId: number
+  currentCardPosition: number
+  furthestCardPosition: number
+  id: number
+  lastReadAt: string
+  startedAt: string
+  status: 'completed' | 'in_progress'
+  storyId: number
+}
+
 export type Category = StoryCategory & {
   artwork: StoryImage | null
   featuredStory: Story | null

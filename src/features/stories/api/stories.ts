@@ -5,8 +5,9 @@ import type {
   Story,
   StoryCard,
   StoryFilters,
+  StoryProgress,
 } from '@/features/stories/types'
-import { apiGet } from '@/lib/api/client'
+import { apiGet, apiPut } from '@/lib/api/client'
 
 function storyQueryString(filters: StoryFilters): string {
   const params: string[] = []
@@ -49,6 +50,30 @@ export async function getStory(slug: string): Promise<Story> {
 export async function getStoryCards(slug: string): Promise<StoryCard[]> {
   const response = await apiGet<ApiResource<StoryCard[]>>(
     `/api/v1/stories/${encodeURIComponent(slug)}/cards`,
+  )
+  return response.data
+}
+
+export async function getStoryProgress(
+  childProfileId: number,
+  slug: string,
+): Promise<StoryProgress | null> {
+  const response = await apiGet<ApiResource<StoryProgress | null>>(
+    `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/progress`,
+    true,
+  )
+  return response.data
+}
+
+export async function updateStoryProgress(
+  childProfileId: number,
+  slug: string,
+  cardId: number,
+): Promise<StoryProgress> {
+  const response = await apiPut<ApiResource<StoryProgress>>(
+    `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/progress`,
+    { card_id: cardId },
+    true,
   )
   return response.data
 }

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { ViewToken } from 'react-native'
 import {
   FlatList,
@@ -14,8 +14,14 @@ import {
 
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
+import { useAuth } from '@/features/auth/context/auth-context'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
-import { useStory, useStoryCards } from '@/features/stories/hooks/use-story-catalog'
+import {
+  useStory,
+  useStoryCards,
+  useStoryProgress,
+  useUpdateStoryProgress,
+} from '@/features/stories/hooks/use-story-catalog'
 import type { Story, StoryCard } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
@@ -52,21 +58,36 @@ function ReadingPage({
 export default function StoryReaderScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
+  const { activeProfile, readerMode } = useAuth()
+  const trackingProfileId = readerMode === 'child' ? activeProfile?.id : undefined
   const storyQuery = useStory(slug)
   const cardsQuery = useStoryCards(slug)
+  const progressQuery = useStoryProgress(trackingProfileId, slug)
+  const { mutate: updateProgress } = useUpdateStoryProgress(trackingProfileId, slug)
   const story = storyQuery.data
   const cards = cardsQuery.data
   const [pageHeight, setPageHeight] = useState(0)
   const [activePage, setActivePage] = useState(0)
+  const lastTrackedCardId = useRef<number | null>(null)
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken<StoryCard>[] }) => {
       const nextPage = viewableItems[0]?.index
+      const visibleCard = viewableItems[0]?.item
 
       if (nextPage !== null && nextPage !== undefined) {
         setActivePage(nextPage)
       }
+
+      if (
+        trackingProfileId &&
+        visibleCard &&
+        lastTrackedCardId.current !== visibleCard.id
+      ) {
+        lastTrackedCardId.current = visibleCard.id
+        updateProgress(visibleCard.id)
+      }
     },
-    [],
+    [trackingProfileId, updateProgress],
   )
 
   function returnToSummary() {
@@ -86,7 +107,11 @@ export default function StoryReaderScreen() {
     }
   }
 
-  if (storyQuery.isPending || cardsQuery.isPending) {
+  if (
+    storyQuery.isPending ||
+    cardsQuery.isPending ||
+    (trackingProfileId && progressQuery.isPending)
+  ) {
     return (
       <MobileFrame
         backgroundColor={appPalette.colors.neutral[1000]}
@@ -133,6 +158,12 @@ export default function StoryReaderScreen() {
       </MobileFrame>
     )
   }
+
+  const savedCardIndex =
+    progressQuery.data?.status === 'in_progress'
+      ? cards.findIndex((card) => card.id === progressQuery.data?.currentCardId)
+      : -1
+  const initialCardIndex = Math.max(0, savedCardIndex)
 
   return (
     <MobileFrame
@@ -191,6 +222,7 @@ export default function StoryReaderScreen() {
                   offset: pageHeight * index,
                 })}
                 keyExtractor={(card) => `${story.slug}-${card.id}`}
+                initialScrollIndex={initialCardIndex}
                 onViewableItemsChanged={handleViewableItemsChanged}
                 pagingEnabled
                 renderItem={({ item }) => (
