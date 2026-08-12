@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
+import { Image } from 'expo-image'
 import { useCallback, useRef, useState } from 'react'
 import type { ViewToken } from 'react-native'
 import {
@@ -7,6 +8,7 @@ import {
   LayoutChangeEvent,
   Pressable,
   SafeAreaView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -20,14 +22,19 @@ import { useReadingSession } from '@/features/stories/hooks/use-reading-session'
 import {
   useStory,
   useStoryCards,
+  useCompleteStory,
   useStoryProgress,
   useUpdateStoryProgress,
 } from '@/features/stories/hooks/use-story-catalog'
-import type { Story, StoryCard } from '@/features/stories/types'
+import type { Story, StoryCard, StoryCompletion } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 const storyViewabilityConfig = { itemVisiblePercentThreshold: 60 }
+
+type ReaderItem =
+  | { card: StoryCard; id: string; kind: 'story' }
+  | { id: 'story-ending'; kind: 'ending' }
 
 function ReadingPage({
   card,
@@ -56,6 +63,112 @@ function ReadingPage({
   )
 }
 
+function StoryEndingPage({
+  completion,
+  height,
+  isError,
+  isPending,
+  onBackHome,
+  onRetry,
+  story,
+}: {
+  completion?: StoryCompletion
+  height: number
+  isError: boolean
+  isPending: boolean
+  onBackHome: () => void
+  onRetry: () => void
+  story: Story
+}) {
+  const newBadges = completion?.newBadges ?? []
+
+  return (
+    <View style={[styles.page, styles.endingPage, { height }]}>
+      <View style={styles.completionMark}>
+        <SymbolView
+          name={{ ios: 'sparkles', android: 'auto_awesome', web: 'auto_awesome' }}
+          size={38}
+          tintColor={appColors.text.onPrimary}
+        />
+      </View>
+      <Text accessibilityRole="header" style={styles.endingTitle}>
+        YOU DID IT!
+      </Text>
+      <Text style={styles.endingStoryTitle}>{story.title.toUpperCase()}</Text>
+      <Text style={styles.endingBody}>Another story now lives in your imagination.</Text>
+
+      {isPending ? <Text style={styles.savingText}>SAVING YOUR JOURNEY...</Text> : null}
+
+      {isError ? (
+        <View style={styles.completionError}>
+          <Text style={styles.completionErrorText}>We couldn&apos;t save this just yet.</Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onRetry}
+            style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.retryButtonText}>TRY AGAIN</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      {!isPending && !isError && newBadges.length > 0 ? (
+        <View style={styles.unlockedSection}>
+          <Text style={styles.unlockedLabel}>
+            {newBadges.length === 1 ? 'NEW BADGE UNLOCKED' : 'NEW BADGES UNLOCKED'}
+          </Text>
+          <ScrollView
+            horizontal
+            contentContainerStyle={styles.unlockedBadges}
+            showsHorizontalScrollIndicator={false}
+          >
+            {newBadges.map((badge) => (
+              <View key={badge.id} style={styles.unlockedBadge}>
+                {badge.artworkUrl ? (
+                  <Image
+                    accessibilityLabel={`${badge.name} badge`}
+                    contentFit="cover"
+                    source={{ uri: badge.artworkUrl }}
+                    style={styles.unlockedArtwork}
+                  />
+                ) : (
+                  <View style={[styles.unlockedArtwork, styles.badgeFallback]}>
+                    <SymbolView
+                      name={{ ios: 'medal.fill', android: 'military_tech', web: 'military_tech' }}
+                      size={40}
+                      tintColor={appPalette.colors.primary[500]}
+                    />
+                  </View>
+                )}
+                <Text style={styles.unlockedName}>{badge.name.toUpperCase()}</Text>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
+
+      {!isPending && !isError ? (
+        <View style={styles.endingActions}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => router.replace('/stories')}
+            style={({ pressed }) => [styles.primaryEndingButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.primaryEndingButtonText}>READ ANOTHER STORY</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={onBackHome}
+            style={({ pressed }) => [styles.secondaryEndingButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.secondaryEndingButtonText}>BACK HOME</Text>
+          </Pressable>
+        </View>
+      ) : null}
+    </View>
+  )
+}
+
 export default function StoryReaderScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
@@ -65,35 +178,49 @@ export default function StoryReaderScreen() {
   const cardsQuery = useStoryCards(slug)
   const progressQuery = useStoryProgress(trackingProfileId, slug)
   const { mutate: updateProgress } = useUpdateStoryProgress(trackingProfileId, slug)
+  const {
+    data: completion,
+    isError: completionIsError,
+    isPending: completionIsPending,
+    mutate: completeStory,
+  } = useCompleteStory(trackingProfileId, slug)
   const story = storyQuery.data
   const cards = cardsQuery.data
-  useReadingSession({
-    childProfileId: trackingProfileId,
-    enabled: Boolean(story && cards?.length),
-    slug,
-  })
   const [pageHeight, setPageHeight] = useState(0)
   const [activePage, setActivePage] = useState(0)
+  const completionRequested = useRef(false)
+  useReadingSession({
+    childProfileId: trackingProfileId,
+    enabled: Boolean(story && cards?.length && activePage < (cards?.length ?? 0)),
+    slug,
+  })
   const lastTrackedCardId = useRef<number | null>(null)
   const handleViewableItemsChanged = useCallback(
-    ({ viewableItems }: { viewableItems: ViewToken<StoryCard>[] }) => {
+    ({ viewableItems }: { viewableItems: ViewToken<ReaderItem>[] }) => {
       const nextPage = viewableItems[0]?.index
-      const visibleCard = viewableItems[0]?.item
+      const visibleItem = viewableItems[0]?.item
 
       if (nextPage !== null && nextPage !== undefined) {
         setActivePage(nextPage)
       }
 
+      if (trackingProfileId && visibleItem?.kind === 'story') {
+        if (lastTrackedCardId.current !== visibleItem.card.id) {
+          lastTrackedCardId.current = visibleItem.card.id
+          updateProgress(visibleItem.card.id)
+        }
+      }
+
       if (
         trackingProfileId &&
-        visibleCard &&
-        lastTrackedCardId.current !== visibleCard.id
+        visibleItem?.kind === 'ending' &&
+        !completionRequested.current
       ) {
-        lastTrackedCardId.current = visibleCard.id
-        updateProgress(visibleCard.id)
+        completionRequested.current = true
+        completeStory()
       }
     },
-    [trackingProfileId, updateProgress],
+    [completeStory, trackingProfileId, updateProgress],
   )
 
   function returnToSummary() {
@@ -170,6 +297,10 @@ export default function StoryReaderScreen() {
       ? cards.findIndex((card) => card.id === progressQuery.data?.currentCardId)
       : -1
   const initialCardIndex = Math.max(0, savedCardIndex)
+  const readerItems: ReaderItem[] = [
+    ...cards.map((card) => ({ card, id: `story-card-${card.id}`, kind: 'story' as const })),
+    { id: 'story-ending', kind: 'ending' },
+  ]
 
   return (
     <MobileFrame
@@ -197,18 +328,22 @@ export default function StoryReaderScreen() {
           </View>
 
           <View
-            accessibilityLabel={`Story progress, section ${activePage + 1} of ${cards.length}`}
+            accessibilityLabel={
+              activePage === cards.length
+                ? 'Story complete'
+                : `Story progress, section ${activePage + 1} of ${cards.length}`
+            }
             accessibilityRole="progressbar"
             accessibilityValue={{
-              max: cards.length,
+              max: cards.length + 1,
               min: 1,
               now: activePage + 1,
             }}
             style={styles.progress}
           >
-            {cards.map((card, dotIndex) => (
+            {readerItems.map((item, dotIndex) => (
               <View
-                key={`${story.slug}-progress-${card.id}`}
+                key={`${story.slug}-progress-${item.id}`}
                 style={[
                   styles.progressDot,
                   dotIndex === activePage && styles.progressDotActive,
@@ -220,20 +355,34 @@ export default function StoryReaderScreen() {
           <View onLayout={handleViewportLayout} style={styles.readerViewport}>
             {pageHeight > 0 ? (
               <FlatList
-                data={cards}
+                data={readerItems}
                 decelerationRate="fast"
                 getItemLayout={(_items, index) => ({
                   index,
                   length: pageHeight,
                   offset: pageHeight * index,
                 })}
-                keyExtractor={(card) => `${story.slug}-${card.id}`}
+                keyExtractor={(item) => `${story.slug}-${item.id}`}
                 initialScrollIndex={initialCardIndex}
                 onViewableItemsChanged={handleViewableItemsChanged}
                 pagingEnabled
-                renderItem={({ item }) => (
-                  <ReadingPage card={item} height={pageHeight} story={story} />
-                )}
+                renderItem={({ item }) =>
+                  item.kind === 'story' ? (
+                    <ReadingPage card={item.card} height={pageHeight} story={story} />
+                  ) : (
+                    <StoryEndingPage
+                      completion={completion}
+                      height={pageHeight}
+                      isError={completionIsError}
+                      isPending={completionIsPending}
+                      onBackHome={() =>
+                        router.replace(readerMode === 'parent' ? '/parent-home' : '/home')
+                      }
+                      onRetry={() => completeStory()}
+                      story={story}
+                    />
+                  )
+                }
                 showsVerticalScrollIndicator={false}
                 viewabilityConfig={storyViewabilityConfig}
               />
@@ -327,6 +476,137 @@ const styles = StyleSheet.create({
   progressDotActive: {
     width: 28,
     backgroundColor: appPalette.colors.brown[500],
+  },
+  endingPage: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 18,
+    paddingBottom: 30,
+  },
+  completionMark: {
+    width: 82,
+    height: 82,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 41,
+    backgroundColor: appColors.actions.primary,
+    boxShadow: '0 9px 20px rgba(241, 96, 34, 0.24)',
+  },
+  endingTitle: {
+    marginTop: 20,
+    color: appColors.text.primary,
+    fontFamily: appTypography.displayFont,
+    fontSize: 38,
+    fontWeight: '900',
+    lineHeight: 44,
+    textAlign: 'center',
+  },
+  endingStoryTitle: {
+    maxWidth: 330,
+    marginTop: 6,
+    color: appPalette.colors.primary[400],
+    fontFamily: appTypography.displayFont,
+    fontSize: 22,
+    fontWeight: '900',
+    lineHeight: 28,
+    textAlign: 'center',
+  },
+  endingBody: {
+    maxWidth: 290,
+    marginTop: 10,
+    color: appColors.text.secondary,
+    fontSize: 16,
+    lineHeight: 23,
+    textAlign: 'center',
+  },
+  savingText: {
+    marginTop: 30,
+    color: appPalette.colors.purple[400],
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  unlockedSection: {
+    alignItems: 'center',
+    marginTop: 25,
+  },
+  unlockedLabel: {
+    color: appPalette.colors.purple[400],
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.8,
+  },
+  unlockedBadges: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 14,
+    marginTop: 12,
+  },
+  unlockedBadge: {
+    width: 110,
+    alignItems: 'center',
+  },
+  unlockedArtwork: {
+    width: 84,
+    height: 84,
+    borderWidth: 4,
+    borderColor: appPalette.grays.white,
+    borderRadius: 42,
+    boxShadow: '0 6px 16px rgba(90, 52, 28, 0.16)',
+  },
+  badgeFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: appPalette.colors.yellow[100],
+  },
+  unlockedName: {
+    marginTop: 7,
+    color: appColors.text.primary,
+    fontFamily: appTypography.displayFont,
+    fontSize: 13,
+    fontWeight: '900',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  completionError: {
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 24,
+  },
+  completionErrorText: {
+    color: appPalette.colors.red[200],
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  endingActions: {
+    width: '100%',
+    gap: 10,
+    marginTop: 28,
+  },
+  primaryEndingButton: {
+    minHeight: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+    backgroundColor: appColors.actions.primary,
+  },
+  primaryEndingButtonText: {
+    color: appColors.text.onPrimary,
+    fontSize: 14,
+    fontWeight: '900',
+  },
+  secondaryEndingButton: {
+    minHeight: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: appColors.actions.secondary,
+    borderRadius: 26,
+    backgroundColor: 'rgba(255, 255, 255, 0.58)',
+  },
+  secondaryEndingButtonText: {
+    color: appColors.actions.secondary,
+    fontSize: 14,
+    fontWeight: '900',
   },
   missingState: {
     flex: 1,

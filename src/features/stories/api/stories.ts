@@ -5,6 +5,7 @@ import type {
   ReadingSession,
   Story,
   StoryCard,
+  StoryCompletion,
   StoryFilters,
   StoryProgress,
 } from '@/features/stories/types'
@@ -76,6 +77,19 @@ export async function updateStoryProgress(
     { card_id: cardId },
     true,
   )
+  return response.data
+}
+
+export async function completeStory(
+  childProfileId: number,
+  slug: string,
+): Promise<StoryCompletion> {
+  const response = await apiPost<ApiResource<StoryCompletion>>(
+    `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/complete`,
+    undefined,
+    true,
+  )
+
   return response.data
 }
 

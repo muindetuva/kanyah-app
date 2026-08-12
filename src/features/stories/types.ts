@@ -55,6 +55,19 @@ export type ReadingSession = {
   storyId: number
 }
 
+export type UnlockedBadge = {
+  artworkUrl: string | null
+  description: string
+  id: number
+  key: string
+  name: string
+}
+
+export type StoryCompletion = {
+  newBadges: UnlockedBadge[]
+  progress: StoryProgress
+}
+
 export type Category = StoryCategory & {
   artwork: StoryImage | null
   featuredStory: Story | null

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import {
+  completeStory,
   getCategories,
   getStories,
   getStory,
@@ -73,6 +74,26 @@ export function useUpdateStoryProgress(
         ['story-progress', childProfileId ?? 0, slug ?? ''],
         progress,
       )
+    },
+  })
+}
+
+export function useCompleteStory(
+  childProfileId: number | undefined,
+  slug: string | undefined,
+) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => completeStory(childProfileId!, slug!),
+    onSuccess: (completion) => {
+      queryClient.setQueryData(
+        ['story-progress', childProfileId ?? 0, slug ?? ''],
+        completion.progress,
+      )
+      void queryClient.invalidateQueries({
+        queryKey: ['profile-badges', childProfileId ?? 0],
+      })
     },
   })
 }
