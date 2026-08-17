@@ -562,7 +562,7 @@ export default function HomeScreen() {
                 />
 
                 <Text style={[styles.copyright, isDesktop && styles.copyrightDesktop]}>
-                  © 2026 Kanyah, a MESRAC project. All rights reserved.
+                  © 2026 Kanyah. All rights reserved.
                 </Text>
               </View>
             </View>
