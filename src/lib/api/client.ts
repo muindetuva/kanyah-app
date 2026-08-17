@@ -95,6 +95,14 @@ export function apiPut<T>(path: string, body?: unknown, authenticated = false): 
   })
 }
 
+export function apiPatch<T>(path: string, body?: unknown, authenticated = false): Promise<T> {
+  return apiRequest<T>(path, {
+    method: 'PATCH',
+    body,
+    authenticated,
+  })
+}
+
 export function apiDelete<T>(path: string, authenticated = false): Promise<T> {
   return apiRequest<T>(path, {
     method: 'DELETE',

@@ -38,6 +38,16 @@ export type LoginInput = {
   password: string
 }
 
+export type UpdateParentAccountInput = {
+  name: string
+}
+
+export type UpdateParentPasswordInput = {
+  current_password: string
+  password: string
+  password_confirmation: string
+}
+
 export type CreateChildProfileInput = {
   display_name: string
   age: number

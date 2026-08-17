@@ -4,8 +4,10 @@ import type {
   AuthUser,
   LoginInput,
   RegisterInput,
+  UpdateParentAccountInput,
+  UpdateParentPasswordInput,
 } from '@/features/auth/types'
-import { apiGet, apiPost, apiPut } from '@/lib/api/client'
+import { apiGet, apiPatch, apiPost, apiPut } from '@/lib/api/client'
 
 export function register(input: RegisterInput): Promise<AuthResponse> {
   return apiPost<AuthResponse>('/api/v1/auth/register', input)
@@ -22,6 +24,15 @@ export async function logout(): Promise<void> {
 export async function getCurrentUser(): Promise<AuthUser> {
   const response = await apiGet<ApiResource<AuthUser>>('/api/v1/auth/me', true)
   return response.data
+}
+
+export async function updateParentAccount(input: UpdateParentAccountInput): Promise<AuthUser> {
+  const response = await apiPatch<ApiResource<AuthUser>>('/api/v1/auth/account', input, true)
+  return response.data
+}
+
+export async function updateParentPassword(input: UpdateParentPasswordInput): Promise<void> {
+  await apiPut<{ message: string }>('/api/v1/auth/password', input, true)
 }
 
 export async function storeParentPin(pin: string, pinConfirmation: string): Promise<void> {

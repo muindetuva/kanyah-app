@@ -6,6 +6,8 @@ import {
   login as requestLogin,
   logout as requestLogout,
   register as requestRegistration,
+  updateParentAccount as requestAccountUpdate,
+  updateParentPassword as requestPasswordUpdate,
 } from '@/features/auth/api/auth'
 import {
   clearAuthToken,
@@ -22,7 +24,14 @@ import {
   clearReaderSelection,
   setReaderSelection,
 } from '@/features/auth/storage/reader-selection'
-import type { AuthUser, ChildProfile, LoginInput, RegisterInput } from '@/features/auth/types'
+import type {
+  AuthUser,
+  ChildProfile,
+  LoginInput,
+  RegisterInput,
+  UpdateParentAccountInput,
+  UpdateParentPasswordInput,
+} from '@/features/auth/types'
 
 export type ReaderMode = 'child' | 'parent'
 
@@ -41,7 +50,9 @@ type AuthContextValue = {
   register: (input: RegisterInput) => Promise<AuthUser>
   selectParent: () => void
   selectProfile: (profile: ChildProfile) => void
+  updateAccount: (input: UpdateParentAccountInput) => Promise<AuthUser>
   updateChildProfile: (profile: ChildProfile) => void
+  updatePassword: (input: UpdateParentPasswordInput) => Promise<void>
   user: AuthUser | null
 }
 
@@ -139,6 +150,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(currentUser)
     return currentUser
   }, [])
+
+  const updateAccount = useCallback(async (input: UpdateParentAccountInput) => {
+    const updatedUser = await requestAccountUpdate(input)
+    setUser(updatedUser)
+    return updatedUser
+  }, [])
+
+  const updatePassword = useCallback(
+    (input: UpdateParentPasswordInput) => requestPasswordUpdate(input),
+    [],
+  )
 
   const addChildProfile = useCallback((profile: ChildProfile, options?: { select?: boolean }) => {
     setUser((currentUser) =>
@@ -260,7 +282,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register,
       selectParent,
       selectProfile,
+      updateAccount,
       updateChildProfile,
+      updatePassword,
       user,
     }),
     [
@@ -278,7 +302,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       register,
       selectParent,
       selectProfile,
+      updateAccount,
       updateChildProfile,
+      updatePassword,
       user,
     ],
   )
