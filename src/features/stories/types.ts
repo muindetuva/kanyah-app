@@ -97,6 +97,7 @@ export type PaginatedStories = {
 }
 
 export type StoryFilters = {
+  age?: number
   category?: string
   page?: number
   perPage?: number

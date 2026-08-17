@@ -130,7 +130,7 @@ function StoryTile({ story }: { story: Story }) {
 export default function ChildHomeScreen() {
   const { activeProfile, deviceMode, isRestoring, readerMode, user } = useAuth()
   const categoriesQuery = useCategories()
-  const storiesQuery = useStories({ perPage: 8 })
+  const storiesQuery = useStories({ age: activeProfile?.age, perPage: 8 })
 
   useEffect(() => {
     if (!isRestoring && !user) {

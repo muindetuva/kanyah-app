@@ -94,7 +94,7 @@ function StoryCard({ story }: { story: Story }) {
 }
 
 export default function StoryLibraryScreen() {
-  const { readerMode } = useAuth()
+  const { activeProfile, readerMode } = useAuth()
   const params = useLocalSearchParams<{ category?: string | string[] }>()
   const routeCategory = Array.isArray(params.category) ? params.category[0] : params.category
   const highlightedCategory = routeCategory || undefined
@@ -102,6 +102,7 @@ export default function StoryLibraryScreen() {
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const categoriesQuery = useCategories()
   const storiesQuery = useStories({
+    age: readerMode === 'child' ? activeProfile?.age : undefined,
     category: highlightedCategory,
     search: debouncedSearch || undefined,
   })

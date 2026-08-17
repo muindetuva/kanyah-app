@@ -14,6 +14,10 @@ import { apiGet, apiPost, apiPut } from '@/lib/api/client'
 function storyQueryString(filters: StoryFilters): string {
   const params: string[] = []
 
+  if (filters.age) {
+    params.push(`age=${filters.age}`)
+  }
+
   if (filters.category) {
     params.push(`category=${encodeURIComponent(filters.category)}`)
   }

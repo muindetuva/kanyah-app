@@ -25,6 +25,7 @@ export function useStories(filters: StoryFilters = {}) {
   return useQuery({
     queryKey: [
       'stories',
+      filters.age ?? 0,
       filters.category ?? '',
       filters.search ?? '',
       filters.page ?? 1,
