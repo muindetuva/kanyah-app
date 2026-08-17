@@ -18,6 +18,7 @@ import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
+import { StoryNarrationPlayer } from '@/features/stories/components/story-narration-player'
 import { useReadingSession } from '@/features/stories/hooks/use-reading-session'
 import {
   useStory,
@@ -48,7 +49,7 @@ function ReadingPage({
   const artworkHeight = Math.min(420, Math.max(260, Math.round(height * 0.52)))
 
   return (
-    <View style={[styles.page, { height }]}>
+    <View style={[styles.page, card.narration && styles.pageWithNarration, { height }]}>
       <View style={styles.readingCard}>
         <View style={styles.textPanel}>
           <Text style={styles.cardText}>{card.content}</Text>
@@ -188,6 +189,7 @@ export default function StoryReaderScreen() {
   const cards = cardsQuery.data
   const [pageHeight, setPageHeight] = useState(0)
   const [activePage, setActivePage] = useState(0)
+  const readerListRef = useRef<FlatList<ReaderItem> | null>(null)
   const completionRequested = useRef(false)
   useReadingSession({
     childProfileId: trackingProfileId,
@@ -222,6 +224,16 @@ export default function StoryReaderScreen() {
     },
     [completeStory, trackingProfileId, updateProgress],
   )
+  const handleNarrationFinished = useCallback(() => {
+    if (!cards?.length || activePage >= cards.length) {
+      return
+    }
+
+    readerListRef.current?.scrollToIndex({
+      animated: true,
+      index: Math.min(activePage + 1, cards.length),
+    })
+  }, [activePage, cards])
 
   function returnToSummary() {
     if (router.canGoBack()) {
@@ -301,6 +313,7 @@ export default function StoryReaderScreen() {
     ...cards.map((card) => ({ card, id: `story-card-${card.id}`, kind: 'story' as const })),
     { id: 'story-ending', kind: 'ending' },
   ]
+  const activeCard = activePage < cards.length ? cards[activePage] : undefined
 
   return (
     <MobileFrame
@@ -355,6 +368,7 @@ export default function StoryReaderScreen() {
           <View onLayout={handleViewportLayout} style={styles.readerViewport}>
             {pageHeight > 0 ? (
               <FlatList
+                ref={readerListRef}
                 data={readerItems}
                 decelerationRate="fast"
                 getItemLayout={(_items, index) => ({
@@ -388,6 +402,16 @@ export default function StoryReaderScreen() {
               />
             ) : null}
           </View>
+
+          {activeCard?.narration ? (
+            <View pointerEvents="box-none" style={styles.narrationOverlay}>
+              <StoryNarrationPlayer
+                narrationKey={activeCard.id}
+                narrationUrl={activeCard.narration.url}
+                onFinished={handleNarrationFinished}
+              />
+            </View>
+          ) : null}
         </SafeAreaView>
       </KanyahScreenBackground>
     </MobileFrame>
@@ -430,6 +454,9 @@ const styles = StyleSheet.create({
   page: {
     paddingHorizontal: 16,
     paddingBottom: 18,
+  },
+  pageWithNarration: {
+    paddingBottom: 112,
   },
   readingCard: {
     flex: 1,
@@ -476,6 +503,13 @@ const styles = StyleSheet.create({
   progressDotActive: {
     width: 28,
     backgroundColor: appPalette.colors.brown[500],
+  },
+  narrationOverlay: {
+    position: 'absolute',
+    right: 16,
+    bottom: 18,
+    left: 16,
+    alignItems: 'flex-end',
   },
   endingPage: {
     alignItems: 'center',

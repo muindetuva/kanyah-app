@@ -29,6 +29,9 @@ export type StoryCard = {
   content: string
   id: number
   image: StoryImage | null
+  narration: {
+    url: string
+  } | null
   position: number
 }
 
