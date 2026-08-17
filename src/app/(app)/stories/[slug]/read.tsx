@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     paddingBottom: 18,
   },
   pageWithNarration: {
-    paddingBottom: 112,
+    paddingBottom: 88,
   },
   readingCard: {
     flex: 1,

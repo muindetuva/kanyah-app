@@ -1,7 +1,8 @@
 import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio'
+import { GlassView, isGlassEffectAPIAvailable } from 'expo-glass-effect'
 import { SymbolView } from 'expo-symbols'
-import { useEffect, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { type PropsWithChildren, useEffect, useRef, useState } from 'react'
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 
 import { appColors, appPalette } from '@/theme/colors'
 
@@ -9,6 +10,27 @@ type StoryNarrationPlayerProps = {
   narrationKey: number
   narrationUrl: string
   onFinished: () => void
+}
+
+const webGlassStyle = Platform.OS === 'web'
+  ? ({ backdropFilter: 'blur(8px) saturate(120%)' } as never)
+  : undefined
+
+function NarrationSurface({ children }: PropsWithChildren) {
+  if (isGlassEffectAPIAvailable()) {
+    return (
+      <GlassView
+        colorScheme="light"
+        glassEffectStyle="regular"
+        style={styles.player}
+        tintColor="rgba(255, 253, 249, 0.42)"
+      >
+        {children}
+      </GlassView>
+    )
+  }
+
+  return <View style={[styles.player, webGlassStyle]}>{children}</View>
 }
 
 export function StoryNarrationPlayer({
@@ -124,58 +146,25 @@ export function StoryNarrationPlayer({
     )
   }
 
-  const statusLabel = status.error
-    ? 'NARRATION UNAVAILABLE'
-    : status.isBuffering || !status.isLoaded
-      ? 'LOADING AUDIO'
-      : status.playing
-        ? 'PLAYING NARRATION'
-        : 'NARRATION PAUSED'
-
   return (
-    <View style={styles.player}>
-      <View style={styles.playerHeader}>
-        <View style={styles.playerLabelGroup}>
-          <SymbolView
-            name={{ ios: 'speaker.wave.2.fill', android: 'volume_up', web: 'volume_up' }}
-            size={18}
-            tintColor={appPalette.colors.primary[400]}
-          />
-          <Text accessibilityLiveRegion="polite" style={styles.playerLabel}>
-            {statusLabel}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityLabel="Minimize narration controls"
-          accessibilityRole="button"
-          onPress={() => setIsExpanded(false)}
-          style={({ pressed }) => [styles.smallButton, pressed && styles.pressed]}
-        >
-          <SymbolView
-            name={{ ios: 'chevron.down', android: 'keyboard_arrow_down', web: 'keyboard_arrow_down' }}
-            size={22}
-            tintColor={appPalette.colors.brown[500]}
-          />
-        </Pressable>
-      </View>
-
-      {status.error ? (
-        <Pressable
-          accessibilityLabel="Retry narration"
-          accessibilityRole="button"
-          onPress={retryNarration}
-          style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
-        >
-          <SymbolView
-            name={{ ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' }}
-            size={19}
-            tintColor={appColors.actions.secondary}
-          />
-          <Text style={styles.retryText}>TRY AGAIN</Text>
-        </Pressable>
-      ) : (
-        <View style={styles.playbackContent}>
-          <View style={styles.playbackControls}>
+    <NarrationSurface>
+      <View style={styles.playbackControls}>
+        {status.error ? (
+          <Pressable
+            accessibilityLabel="Retry narration"
+            accessibilityRole="button"
+            onPress={retryNarration}
+            style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
+          >
+            <SymbolView
+              name={{ ios: 'arrow.clockwise', android: 'refresh', web: 'refresh' }}
+              size={18}
+              tintColor={appColors.actions.secondary}
+            />
+            <Text style={styles.retryText}>TRY AGAIN</Text>
+          </Pressable>
+        ) : (
+          <>
             <Pressable
               accessibilityLabel="Rewind narration 5 seconds"
               accessibilityRole="button"
@@ -189,7 +178,7 @@ export function StoryNarrationPlayer({
             >
               <SymbolView
                 name={{ ios: 'gobackward.5', android: 'replay_5', web: 'replay_5' }}
-                size={24}
+                size={22}
                 tintColor={appPalette.colors.brown[500]}
               />
             </Pressable>
@@ -206,7 +195,7 @@ export function StoryNarrationPlayer({
                     ? { ios: 'pause.fill', android: 'pause', web: 'pause' }
                     : { ios: 'play.fill', android: 'play_arrow', web: 'play_arrow' }
                 }
-                size={25}
+                size={22}
                 tintColor={appColors.text.onPrimary}
               />
             </Pressable>
@@ -224,112 +213,93 @@ export function StoryNarrationPlayer({
             >
               <SymbolView
                 name={{ ios: 'goforward.5', android: 'forward_5', web: 'forward_5' }}
-                size={24}
+                size={22}
                 tintColor={appPalette.colors.brown[500]}
               />
             </Pressable>
-          </View>
+          </>
+        )}
+      </View>
 
-          <View
-            accessibilityLabel={`Narration progress ${Math.round(progress * 100)} percent`}
-            accessibilityRole="progressbar"
-            accessibilityValue={{ max: 100, min: 0, now: Math.round(progress * 100) }}
-            style={styles.progressTrack}
-          >
-            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-          </View>
-        </View>
-      )}
-    </View>
+      <View
+        accessibilityLabel={`Narration progress ${Math.round(progress * 100)} percent`}
+        accessibilityRole="progressbar"
+        accessibilityValue={{ max: 100, min: 0, now: Math.round(progress * 100) }}
+        style={styles.progressTrack}
+      >
+        <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+      </View>
+    </NarrationSurface>
   )
 }
 
 const styles = StyleSheet.create({
   listenButton: {
-    width: 58,
-    height: 58,
+    width: 52,
+    height: 52,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: appPalette.grays.white,
-    borderRadius: 29,
+    borderRadius: 26,
     backgroundColor: appColors.actions.primary,
     boxShadow: '0 8px 18px rgba(90, 52, 28, 0.24)',
   },
   player: {
     width: '100%',
-    minHeight: 110,
+    overflow: 'hidden',
     borderWidth: 1,
-    borderColor: appPalette.colors.primary[100],
-    borderRadius: 24,
-    backgroundColor: '#FFFDF9',
-    paddingHorizontal: 14,
-    paddingTop: 10,
-    paddingBottom: 14,
-    boxShadow: '0 9px 24px rgba(90, 52, 28, 0.2)',
-  },
-  playerHeader: {
-    minHeight: 32,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  playerLabelGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-  },
-  playerLabel: {
-    color: appPalette.colors.brown[500],
-    fontSize: 12,
-    fontWeight: '900',
-    letterSpacing: 0.6,
-  },
-  playbackContent: {
-    marginTop: 5,
+    borderColor: 'rgba(255, 255, 255, 0.72)',
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 253, 249, 0.58)',
+    paddingHorizontal: 10,
+    paddingTop: 7,
+    paddingBottom: 8,
+    boxShadow: '0 8px 22px rgba(90, 52, 28, 0.16)',
   },
   playbackControls: {
-    minHeight: 50,
+    minHeight: 42,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 24,
+    gap: 28,
   },
   smallButton: {
-    width: 44,
-    height: 44,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 22,
+    borderRadius: 20,
   },
   playButton: {
-    width: 50,
-    height: 50,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 25,
+    borderRadius: 21,
     backgroundColor: appColors.actions.primary,
   },
   progressTrack: {
-    height: 8,
+    height: 4,
     overflow: 'hidden',
-    marginTop: 9,
-    borderRadius: 4,
-    backgroundColor: appPalette.colors.neutral[200],
+    marginHorizontal: 4,
+    marginTop: 5,
+    borderRadius: 2,
+    backgroundColor: 'rgba(179, 177, 182, 0.55)',
   },
   progressFill: {
     height: '100%',
-    borderRadius: 4,
+    borderRadius: 2,
     backgroundColor: appColors.actions.primary,
   },
   retryButton: {
-    minHeight: 48,
+    minHeight: 40,
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    marginTop: 5,
-    borderRadius: 24,
+    borderRadius: 20,
     backgroundColor: appPalette.colors.secondary[10],
   },
   retryText: {
