@@ -17,26 +17,6 @@ import type { Story } from '@/features/stories/types'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
-function UsageCard() {
-  return (
-    <View style={styles.usageCard}>
-      <View style={styles.usageHeader}>
-        <Text style={styles.usageText}>7 of 10 free stories used</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ disabled: true }}
-          disabled
-        >
-          <Text style={styles.upgradeText}>Upgrade</Text>
-        </Pressable>
-      </View>
-      <View style={styles.progressTrack}>
-        <View style={styles.progressValue} />
-      </View>
-    </View>
-  )
-}
-
 function RecommendedStory({ childName, story }: { childName: string; story: Story }) {
   const category = story.categories[0]?.name ?? 'Story'
 
@@ -147,6 +127,7 @@ const parentActions = [
       android: 'bar_chart' as const,
       web: 'bar_chart' as const,
     },
+    route: '/analytics' as const,
   },
   {
     id: 'account',
@@ -259,7 +240,6 @@ export default function ParentHomeScreen() {
           </Pressable>
         </View>
 
-        <UsageCard />
         {storiesQuery.isPending ? <StoryListSkeleton /> : null}
         {storiesQuery.isError ? (
           <CatalogMessage
@@ -303,43 +283,6 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 0.2,
     lineHeight: 35,
-  },
-  usageCard: {
-    gap: 11,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    borderRadius: 16,
-    backgroundColor: appPalette.grays.white,
-    boxShadow: '0 8px 18px rgba(90, 52, 28, 0.1)',
-  },
-  usageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  usageText: {
-    color: appPalette.colors.neutral[1000],
-    fontSize: 13,
-    fontWeight: '600',
-    lineHeight: 18,
-  },
-  upgradeText: {
-    color: appColors.actions.secondary,
-    fontSize: 13,
-    fontWeight: '700',
-    lineHeight: 18,
-  },
-  progressTrack: {
-    height: 5,
-    overflow: 'hidden',
-    borderRadius: 3,
-    backgroundColor: appPalette.colors.neutral[200],
-  },
-  progressValue: {
-    width: '70%',
-    height: '100%',
-    borderRadius: 3,
-    backgroundColor: appPalette.colors.purple[300],
   },
   storyCard: {
     overflow: 'hidden',

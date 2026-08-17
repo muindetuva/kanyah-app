@@ -46,6 +46,7 @@ export type StoryProgress = {
   startedAt: string
   status: 'completed' | 'in_progress'
   storyId: number
+  story?: Story
 }
 
 export type ReadingSession = {

@@ -1,18 +1,28 @@
-import { router } from 'expo-router'
+import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { useEffect } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { useAuth } from '@/features/auth/context/auth-context'
 import { ParentAppShell } from '@/features/navigation/components/child-app-shell'
-import { ProgressOverviewCard } from '@/features/progress/components/progress-sections'
+import {
+  CategoryProgress,
+  ChildProgressHero,
+  RecentActivity,
+  RecentBadges,
+  WeeklyReadingChart,
+} from '@/features/progress/components/progress-sections'
 import { useParentProgress } from '@/features/progress/hooks/use-parent-progress'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
-export default function AnalyticsScreen() {
+export default function ChildProgressScreen() {
+  const params = useLocalSearchParams<{ profileId?: string | string[] }>()
+  const profileIdValue = Array.isArray(params.profileId) ? params.profileId[0] : params.profileId
+  const profileId = Number(profileIdValue)
   const { isRestoring, readerMode, user } = useAuth()
   const progressQuery = useParentProgress(Boolean(user && readerMode === 'parent'))
+  const summary = progressQuery.data?.find((item) => item.profile.id === profileId)
 
   useEffect(() => {
     if (!isRestoring && !user) {
@@ -30,9 +40,9 @@ export default function AnalyticsScreen() {
       >
         <View style={styles.header}>
           <Pressable
-            accessibilityLabel="Back to parent home"
+            accessibilityLabel="Back to progress overview"
             accessibilityRole="button"
-            onPress={() => router.navigate('/parent-home')}
+            onPress={() => router.navigate('/analytics')}
             style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}
           >
             <SymbolView
@@ -41,15 +51,20 @@ export default function AnalyticsScreen() {
               tintColor={appPalette.colors.brown[500]}
             />
           </Pressable>
-          <Text accessibilityRole="header" style={styles.title}>PROGRESS OVERVIEW</Text>
+          <Text accessibilityRole="header" style={styles.title}>CHILD PROFILE</Text>
         </View>
 
-        {progressQuery.isPending ? <ProgressLoading /> : null}
+        {progressQuery.isPending ? (
+          <View style={styles.message}>
+            <Text style={styles.messageTitle}>OPENING THEIR JOURNEY</Text>
+            <Text style={styles.messageBody}>Gathering reading progress...</Text>
+          </View>
+        ) : null}
 
         {progressQuery.isError ? (
           <View style={styles.message}>
             <Text style={styles.messageTitle}>PROGRESS TOOK A BREAK</Text>
-            <Text style={styles.messageBody}>We couldn&apos;t load the children&apos;s reading activity.</Text>
+            <Text style={styles.messageBody}>We couldn&apos;t load this child&apos;s reading activity.</Text>
             <Pressable
               accessibilityRole="button"
               onPress={() => progressQuery.refetch()}
@@ -60,43 +75,24 @@ export default function AnalyticsScreen() {
           </View>
         ) : null}
 
-        {progressQuery.data?.length === 0 ? (
+        {!progressQuery.isPending && !progressQuery.isError && !summary ? (
           <View style={styles.message}>
-            <Text style={styles.messageTitle}>NO CHILD PROFILES YET</Text>
-            <Text style={styles.messageBody}>Create a child profile to begin tracking a reading journey.</Text>
-            <Pressable
-              accessibilityRole="button"
-              onPress={() => router.push('/create-profile')}
-              style={({ pressed }) => [styles.retryButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.retryText}>CREATE PROFILE</Text>
-            </Pressable>
+            <Text style={styles.messageTitle}>PROFILE NOT FOUND</Text>
+            <Text style={styles.messageBody}>This profile is unavailable or no longer active.</Text>
           </View>
         ) : null}
 
-        <View style={styles.profileList}>
-          {(progressQuery.data ?? []).map((summary) => (
-            <ProgressOverviewCard key={summary.profile.id} summary={summary} />
-          ))}
-        </View>
+        {summary ? (
+          <>
+            <ChildProgressHero summary={summary} />
+            <RecentBadges badges={summary.recentBadges} />
+            <WeeklyReadingChart activity={summary.weeklyActivity} />
+            <CategoryProgress categories={summary.categoryProgress} />
+            <RecentActivity activity={summary.recentActivity} />
+          </>
+        ) : null}
       </ScrollView>
     </ParentAppShell>
-  )
-}
-
-function ProgressLoading() {
-  return (
-    <View accessibilityLabel="Loading reading progress" style={styles.loadingList}>
-      {[0, 1].map((item) => (
-        <View key={item} style={styles.loadingCard}>
-          <View style={styles.loadingAvatar} />
-          <View style={styles.loadingCopy}>
-            <View style={styles.loadingLineWide} />
-            <View style={styles.loadingLine} />
-          </View>
-        </View>
-      ))}
-    </View>
   )
 }
 
@@ -129,16 +125,13 @@ const styles = StyleSheet.create({
     fontSize: 25,
     lineHeight: 30,
   },
-  profileList: {
-    gap: 16,
-  },
   message: {
     alignItems: 'center',
-    gap: 11,
+    gap: 12,
     borderRadius: 22,
     backgroundColor: 'rgba(255, 253, 249, 0.94)',
     paddingHorizontal: 20,
-    paddingVertical: 28,
+    paddingVertical: 32,
   },
   messageTitle: {
     color: appColors.text.primary,
@@ -147,7 +140,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   messageBody: {
-    maxWidth: 290,
     color: appColors.text.secondary,
     fontSize: 14,
     lineHeight: 20,
@@ -165,41 +157,6 @@ const styles = StyleSheet.create({
     color: appColors.text.onPrimary,
     fontSize: 12,
     fontWeight: '900',
-  },
-  loadingList: {
-    gap: 16,
-  },
-  loadingCard: {
-    minHeight: 170,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 253, 249, 0.72)',
-    padding: 16,
-  },
-  loadingAvatar: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: appPalette.colors.neutral[200],
-  },
-  loadingCopy: {
-    flex: 1,
-    gap: 9,
-    paddingTop: 7,
-  },
-  loadingLineWide: {
-    width: '70%',
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: appPalette.colors.neutral[200],
-  },
-  loadingLine: {
-    width: '45%',
-    height: 11,
-    borderRadius: 6,
-    backgroundColor: appPalette.colors.neutral[100],
   },
   pressed: {
     opacity: 0.72,

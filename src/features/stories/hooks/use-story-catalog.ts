@@ -74,6 +74,7 @@ export function useUpdateStoryProgress(
         ['story-progress', childProfileId ?? 0, slug ?? ''],
         progress,
       )
+      void queryClient.invalidateQueries({ queryKey: ['parent-progress'] })
     },
   })
 }
@@ -94,6 +95,7 @@ export function useCompleteStory(
       void queryClient.invalidateQueries({
         queryKey: ['profile-badges', childProfileId ?? 0],
       })
+      void queryClient.invalidateQueries({ queryKey: ['parent-progress'] })
     },
   })
 }
