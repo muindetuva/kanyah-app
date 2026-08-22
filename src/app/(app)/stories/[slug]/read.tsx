@@ -476,9 +476,9 @@ const styles = StyleSheet.create({
   cardText: {
     maxWidth: 310,
     color: appPalette.colors.neutral[1000],
-    fontSize: 22,
-    fontWeight: '700',
-    lineHeight: 30,
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: 28,
     textAlign: 'center',
   },
   pageArtwork: {
