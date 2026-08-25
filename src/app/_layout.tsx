@@ -5,11 +5,13 @@ import { useColorScheme } from 'react-native'
 
 import { SessionLoadingScreen } from '@/features/auth/components/session-loading-screen'
 import { AuthProvider, useAuth } from '@/features/auth/context/auth-context'
+import { useOfflineProgressSync } from '@/features/stories/hooks/use-offline-progress-sync'
 
 function AppNavigator() {
   const colorScheme = useColorScheme()
   const segments = useSegments()
   const { isRestoring, user } = useAuth()
+  useOfflineProgressSync()
   const currentRoute = String(segments[0] ?? '')
   const isGuestOnlyRoute = currentRoute === 'login' || currentRoute === 'signup'
 

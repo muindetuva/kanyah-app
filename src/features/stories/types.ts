@@ -69,6 +69,7 @@ export type UnlockedBadge = {
 
 export type StoryCompletion = {
   newBadges: UnlockedBadge[]
+  pendingSync?: boolean
   progress: StoryProgress
 }
 

@@ -99,6 +99,19 @@ function StoryEndingPage({
       <Text style={styles.endingStoryTitle}>{story.title.toUpperCase()}</Text>
       <Text style={styles.endingBody}>Another story now lives in your imagination.</Text>
 
+      {completion?.pendingSync ? (
+        <View accessibilityLiveRegion="polite" style={styles.offlineCompletion}>
+          <SymbolView
+            name={{ ios: 'icloud.and.arrow.up', android: 'cloud_upload', web: 'cloud_upload' }}
+            size={18}
+            tintColor={appColors.actions.secondary}
+          />
+          <Text style={styles.offlineCompletionText}>
+            Saved on this device. We&apos;ll sync when you&apos;re back online.
+          </Text>
+        </View>
+      ) : null}
+
       {isPending ? <Text style={styles.savingText}>SAVING YOUR JOURNEY...</Text> : null}
 
       {isError ? (
@@ -563,6 +576,21 @@ const styles = StyleSheet.create({
     color: appPalette.colors.purple[400],
     fontSize: 13,
     fontWeight: '900',
+  },
+  offlineCompletion: {
+    maxWidth: 310,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+    marginTop: 20,
+  },
+  offlineCompletionText: {
+    flexShrink: 1,
+    color: appColors.text.secondary,
+    fontSize: 14,
+    lineHeight: 19,
+    textAlign: 'center',
   },
   unlockedSection: {
     alignItems: 'center',
