@@ -371,6 +371,7 @@ export default function StoryReaderScreen() {
                 ref={readerListRef}
                 data={readerItems}
                 decelerationRate="fast"
+                disableIntervalMomentum
                 getItemLayout={(_items, index) => ({
                   index,
                   length: pageHeight,
@@ -398,6 +399,8 @@ export default function StoryReaderScreen() {
                   )
                 }
                 showsVerticalScrollIndicator={false}
+                snapToAlignment="start"
+                snapToInterval={pageHeight}
                 viewabilityConfig={storyViewabilityConfig}
               />
             ) : null}
