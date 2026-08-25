@@ -6,6 +6,7 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View, useWindowDimensions } 
 import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { useAuth } from '@/features/auth/context/auth-context'
+import { SessionLoadingScreen } from '@/features/auth/components/session-loading-screen'
 import { InstallKanyahPrompt } from '@/features/pwa/components/install-kanyah-prompt'
 import { appColors } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
@@ -34,6 +35,10 @@ export default function WelcomeScreen() {
       }
     }
   }, [activeProfile, deviceMode, deviceProfileId, isRestoring, readerMode, user])
+
+  if (isRestoring || user) {
+    return <SessionLoadingScreen />
+  }
 
   return (
     <MobileFrame
