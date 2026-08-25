@@ -19,6 +19,7 @@ import { MobileFrame } from '@/components/mobile-frame'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
 import { StoryNarrationPlayer } from '@/features/stories/components/story-narration-player'
+import { useOfflineStory } from '@/features/stories/hooks/use-offline-story'
 import { useReadingSession } from '@/features/stories/hooks/use-reading-session'
 import {
   useStory,
@@ -187,6 +188,7 @@ export default function StoryReaderScreen() {
   } = useCompleteStory(trackingProfileId, slug)
   const story = storyQuery.data
   const cards = cardsQuery.data
+  useOfflineStory(story, cards)
   const [pageHeight, setPageHeight] = useState(0)
   const [activePage, setActivePage] = useState(0)
   const readerListRef = useRef<FlatList<ReaderItem> | null>(null)

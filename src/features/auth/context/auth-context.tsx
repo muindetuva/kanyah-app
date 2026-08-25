@@ -14,6 +14,11 @@ import {
   setAuthToken,
 } from '@/features/auth/storage/auth-token'
 import {
+  clearCachedAuthUser,
+  getCachedAuthUser,
+  setCachedAuthUser,
+} from '@/features/auth/storage/auth-user'
+import {
   getDeviceSetup,
   setDeviceSetup,
   type DeviceMode,
@@ -30,6 +35,7 @@ import type {
   RegisterInput,
   UpdateParentAccountInput,
 } from '@/features/auth/types'
+import { ApiError } from '@/lib/api/client'
 
 export type ReaderMode = 'child' | 'parent'
 
@@ -95,11 +101,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     async function restoreSession() {
-      const token = await getAuthToken()
+      const [token, cachedUser] = await Promise.all([getAuthToken(), getCachedAuthUser()])
 
       if (!token) {
+        await clearCachedAuthUser()
         setIsRestoring(false)
         return
+      }
+
+      if (cachedUser) {
+        const savedDeviceSetup = await getDeviceSetup(cachedUser.id)
+        setUser(cachedUser)
+        applyDeviceSetup(cachedUser, savedDeviceSetup)
+        setIsRestoring(false)
       }
 
       try {
@@ -108,8 +122,19 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
         setUser(currentUser)
         applyDeviceSetup(currentUser, savedDeviceSetup)
-      } catch {
-        await Promise.all([clearAuthToken(), clearReaderSelection()])
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+          await Promise.all([
+            clearAuthToken(),
+            clearCachedAuthUser(),
+            clearReaderSelection(),
+          ])
+          setActiveProfile(null)
+          setDeviceMode(null)
+          setDeviceProfileId(null)
+          setReaderMode(null)
+          setUser(null)
+        }
       } finally {
         setIsRestoring(false)
       }
@@ -117,6 +142,12 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
     void restoreSession()
   }, [applyDeviceSetup])
+
+  useEffect(() => {
+    if (user) {
+      void setCachedAuthUser(user)
+    }
+  }, [user])
 
   const authenticate = useCallback(async (request: Promise<{ token: string; user: AuthUser }>) => {
     const response = await request
@@ -249,7 +280,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
     try {
       await requestLogout()
     } finally {
-      await Promise.all([clearAuthToken(), clearReaderSelection()])
+      await Promise.all([
+        clearAuthToken(),
+        clearCachedAuthUser(),
+        clearReaderSelection(),
+      ])
       setActiveProfile(null)
       setDeviceMode(null)
       setDeviceProfileId(null)

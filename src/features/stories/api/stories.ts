@@ -9,6 +9,15 @@ import type {
   StoryFilters,
   StoryProgress,
 } from '@/features/stories/types'
+import {
+  getOfflineCatalog,
+  getOfflineCategories,
+  getOfflineStory,
+  getOfflineStoryCards,
+  isBrowserOffline,
+  saveOfflineCatalog,
+  saveOfflineCategories,
+} from '@/features/stories/storage/offline-stories'
 import { apiGet, apiPost, apiPut } from '@/lib/api/client'
 
 function storyQueryString(filters: StoryFilters): string {
@@ -38,32 +47,97 @@ function storyQueryString(filters: StoryFilters): string {
 }
 
 export async function getCategories(): Promise<Category[]> {
-  const response = await apiGet<ApiResource<Category[]>>('/api/v1/categories')
-  return response.data
+  const offlineCategories = getOfflineCategories()
+
+  if (isBrowserOffline() && offlineCategories) {
+    return offlineCategories
+  }
+
+  try {
+    const response = await apiGet<ApiResource<Category[]>>('/api/v1/categories')
+    saveOfflineCategories(response.data)
+    return response.data
+  } catch (error) {
+    if (offlineCategories) {
+      return offlineCategories
+    }
+
+    throw error
+  }
 }
 
-export function getStories(filters: StoryFilters = {}): Promise<PaginatedStories> {
-  return apiGet<PaginatedStories>(`/api/v1/stories${storyQueryString(filters)}`)
+export async function getStories(filters: StoryFilters = {}): Promise<PaginatedStories> {
+  const offlineCatalog = getOfflineCatalog(filters)
+
+  if (isBrowserOffline() && offlineCatalog) {
+    return offlineCatalog
+  }
+
+  try {
+    const stories = await apiGet<PaginatedStories>(
+      `/api/v1/stories${storyQueryString(filters)}`,
+    )
+    saveOfflineCatalog(filters, stories)
+    return stories
+  } catch (error) {
+    if (offlineCatalog) {
+      return offlineCatalog
+    }
+
+    throw error
+  }
 }
 
 export async function getStory(slug: string): Promise<Story> {
-  const response = await apiGet<ApiResource<Story>>(
-    `/api/v1/stories/${encodeURIComponent(slug)}`,
-  )
-  return response.data
+  const offlineStory = getOfflineStory(slug)
+
+  if (isBrowserOffline() && offlineStory) {
+    return offlineStory
+  }
+
+  try {
+    const response = await apiGet<ApiResource<Story>>(
+      `/api/v1/stories/${encodeURIComponent(slug)}`,
+    )
+    return response.data
+  } catch (error) {
+    if (offlineStory) {
+      return offlineStory
+    }
+
+    throw error
+  }
 }
 
 export async function getStoryCards(slug: string): Promise<StoryCard[]> {
-  const response = await apiGet<ApiResource<StoryCard[]>>(
-    `/api/v1/stories/${encodeURIComponent(slug)}/cards`,
-  )
-  return response.data
+  const offlineCards = getOfflineStoryCards(slug)
+
+  if (isBrowserOffline() && offlineCards) {
+    return offlineCards
+  }
+
+  try {
+    const response = await apiGet<ApiResource<StoryCard[]>>(
+      `/api/v1/stories/${encodeURIComponent(slug)}/cards`,
+    )
+    return response.data
+  } catch (error) {
+    if (offlineCards) {
+      return offlineCards
+    }
+
+    throw error
+  }
 }
 
 export async function getStoryProgress(
   childProfileId: number,
   slug: string,
 ): Promise<StoryProgress | null> {
+  if (isBrowserOffline()) {
+    return null
+  }
+
   const response = await apiGet<ApiResource<StoryProgress | null>>(
     `/api/v1/child-profiles/${childProfileId}/stories/${encodeURIComponent(slug)}/progress`,
     true,

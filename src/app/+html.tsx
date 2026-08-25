@@ -20,9 +20,35 @@ export default function Root({ children }: PropsWithChildren) {
         <meta content={themeColor} name="theme-color" />
         <link href={manifestHref} rel="manifest" />
         <link href={touchIconHref} rel="apple-touch-icon" />
+        <script dangerouslySetInnerHTML={{ __html: serviceWorkerRegistration }} />
         <ScrollViewStyleReset />
       </head>
       <body>{children}</body>
     </html>
   )
 }
+
+const serviceWorkerRegistration = `
+if ('serviceWorker' in navigator && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').then(function (registration) {
+      return navigator.serviceWorker.ready.then(function () {
+        var resourceUrls = performance.getEntriesByType('resource')
+          .map(function (entry) { return entry.name; })
+          .filter(function (url) {
+            try {
+              return new URL(url).origin === window.location.origin;
+            } catch (_error) {
+              return false;
+            }
+          });
+        var worker = registration.active || navigator.serviceWorker.controller;
+
+        if (worker) {
+          worker.postMessage({ type: 'CACHE_APP_SHELL', urls: resourceUrls });
+        }
+      });
+    }).catch(function () {});
+  });
+}
+`

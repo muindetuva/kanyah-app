@@ -10,7 +10,8 @@ import {
 } from '@/features/navigation/components/child-app-shell'
 import { CatalogMessage } from '@/features/stories/components/catalog-feedback'
 import { StoryArtwork } from '@/features/stories/components/story-artwork'
-import { useStory } from '@/features/stories/hooks/use-story-catalog'
+import { useOfflineStory } from '@/features/stories/hooks/use-offline-story'
+import { useStory, useStoryCards } from '@/features/stories/hooks/use-story-catalog'
 import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
@@ -37,7 +38,9 @@ export default function StorySummaryScreen() {
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
   const storyQuery = useStory(slug)
+  const cardsQuery = useStoryCards(slug)
   const story = storyQuery.data
+  const offlineStatus = useOfflineStory(story, cardsQuery.data)
   const [favorite, setFavorite] = useState(false)
 
   if (storyQuery.isPending) {
@@ -164,6 +167,28 @@ export default function StorySummaryScreen() {
               tintColor={appColors.text.onPrimary}
             />
           </Pressable>
+
+          {cardsQuery.isPending || offlineStatus === 'saving' ? (
+            <View accessibilityLiveRegion="polite" style={styles.offlineStatus}>
+              <SymbolView
+                name={{ ios: 'arrow.down.circle', android: 'download', web: 'download' }}
+                size={17}
+                tintColor={appColors.text.secondary}
+              />
+              <Text style={styles.offlineStatusText}>Saving for offline...</Text>
+            </View>
+          ) : null}
+
+          {offlineStatus === 'available' ? (
+            <View accessibilityLiveRegion="polite" style={styles.offlineStatus}>
+              <SymbolView
+                name={{ ios: 'checkmark.circle.fill', android: 'check_circle', web: 'check_circle' }}
+                size={17}
+                tintColor={appPalette.colors.green[200]}
+              />
+              <Text style={styles.offlineStatusText}>Available offline</Text>
+            </View>
+          ) : null}
         </View>
       </ScrollView>
     </StoryShell>
@@ -286,6 +311,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.2,
     lineHeight: 18,
+  },
+  offlineStatus: {
+    minHeight: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 10,
+  },
+  offlineStatusText: {
+    color: appColors.text.secondary,
+    fontSize: 12,
+    fontWeight: '700',
+    lineHeight: 16,
   },
   missingState: {
     flex: 1,
