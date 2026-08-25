@@ -47,7 +47,9 @@ function RecommendedStory({ childName, story }: { childName: string; story: Stor
       </View>
       <View style={styles.storyMetaRow}>
         <Text style={styles.storyMeta}>
-          Ages {story.minimumAge}-{story.maximumAge} • {category}
+          {story.ageGroup
+            ? `${story.ageGroup.name} · Ages ${story.ageGroup.minimumAge}–${story.ageGroup.maximumAge} • ${category}`
+            : category}
         </Text>
         <View style={styles.playButton}>
           <SymbolView

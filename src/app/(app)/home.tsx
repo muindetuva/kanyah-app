@@ -89,7 +89,9 @@ function FeaturedStory({ story }: { story: Story }) {
             {story.title.toUpperCase()}
           </Text>
           <Text style={styles.featuredMeta}>
-            {category} • Ages {story.minimumAge}-{story.maximumAge}
+            {story.ageGroup
+              ? `${category} • ${story.ageGroup.name} · Ages ${story.ageGroup.minimumAge}–${story.ageGroup.maximumAge}`
+              : category}
           </Text>
         </View>
         <View style={styles.playButton}>

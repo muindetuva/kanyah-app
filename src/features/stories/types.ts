@@ -12,13 +12,20 @@ export type StoryCategory = {
   slug: string
 }
 
+export type StoryAgeGroup = {
+  id: number
+  maximumAge: number
+  minimumAge: number
+  name: string
+  slug: string
+}
+
 export type Story = {
+  ageGroup: StoryAgeGroup | null
   categories: StoryCategory[]
   chapterCount: number
   coverImage: StoryImage | null
   id: number
-  maximumAge: number
-  minimumAge: number
   publishedAt: string | null
   slug: string
   summary: string

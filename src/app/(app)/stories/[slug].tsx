@@ -131,11 +131,13 @@ export default function StorySummaryScreen() {
                 <Text style={styles.pillText}>{story.categories[0].name}</Text>
               </View>
             ) : null}
-            <View style={styles.pill}>
-              <Text style={styles.pillText}>
-                Ages {story.minimumAge}-{story.maximumAge}
-              </Text>
-            </View>
+            {story.ageGroup ? (
+              <View style={styles.pill}>
+                <Text style={styles.pillText}>
+                  {story.ageGroup.name} · Ages {story.ageGroup.minimumAge}–{story.ageGroup.maximumAge}
+                </Text>
+              </View>
+            ) : null}
             <View style={styles.pill}>
               <Text style={styles.pillText}>
                 {story.chapterCount} {story.chapterCount === 1 ? 'Chapter' : 'Chapters'}
