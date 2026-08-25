@@ -126,8 +126,29 @@ export default function SignUpScreen() {
             {agreedToTerms ? <Text style={styles.checkmark}>✓</Text> : null}
           </View>
           <Text style={styles.termsText}>
-            I agree to the <Text style={styles.linkText}>Terms</Text> and{' '}
-            <Text style={styles.linkText}>Privacy Policy</Text>
+            I confirm I&apos;m a parent or guardian and agree to the{' '}
+            <Text
+              accessibilityRole="link"
+              onPress={(event) => {
+                event.stopPropagation()
+                router.push('/terms')
+              }}
+              style={styles.linkText}
+            >
+              Terms
+            </Text>{' '}
+            and{' '}
+            <Text
+              accessibilityRole="link"
+              onPress={(event) => {
+                event.stopPropagation()
+                router.push('/privacy')
+              }}
+              style={styles.linkText}
+            >
+              Privacy Policy
+            </Text>
+            .
           </Text>
         </Pressable>
         {getApiFieldError(error, 'terms') ? (
@@ -141,7 +162,12 @@ export default function SignUpScreen() {
         ) : null}
 
         <AuthPrimaryButton
-          disabled={isSubmitting || pin.length !== 4 || confirmPin.length !== 4}
+          disabled={
+            isSubmitting ||
+            !agreedToTerms ||
+            pin.length !== 4 ||
+            confirmPin.length !== 4
+          }
           label={isSubmitting ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT'}
           onPress={() => void handleSubmit()}
         />
