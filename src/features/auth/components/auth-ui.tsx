@@ -18,15 +18,11 @@ import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { appColors, appPalette } from '@/theme/colors'
 
-type AuthIconName = 'arrowBack' | 'arrowForward' | 'eye' | 'eyeOff' | 'lock' | 'lockReset' | 'person' | 'phone'
+type AuthIconName = 'arrowBack' | 'arrowForward' | 'person' | 'phone'
 
 const iconNames = {
   arrowBack: { ios: 'arrow.left' as const, android: 'arrow_back' as const, web: 'arrow_back' as const },
   arrowForward: { ios: 'arrow.right' as const, android: 'arrow_forward' as const, web: 'arrow_forward' as const },
-  eye: { ios: 'eye' as const, android: 'visibility' as const, web: 'visibility' as const },
-  eyeOff: { ios: 'eye.slash' as const, android: 'visibility_off' as const, web: 'visibility_off' as const },
-  lock: { ios: 'lock' as const, android: 'lock_outline' as const, web: 'lock_outline' as const },
-  lockReset: { ios: 'lock.rotation' as const, android: 'lock_reset' as const, web: 'lock_reset' as const },
   person: { ios: 'person' as const, android: 'person_outline' as const, web: 'person_outline' as const },
   phone: { ios: 'phone' as const, android: 'phone' as const, web: 'phone' as const },
 } as const
@@ -93,15 +89,12 @@ export function AuthBackButton({ onPress }: AuthBackButtonProps) {
 
 type AuthFieldProps = TextInputProps & {
   error?: string
-  icon: Extract<AuthIconName, 'lock' | 'lockReset' | 'person' | 'phone'>
+  icon: Extract<AuthIconName, 'person' | 'phone'>
   label: string
-  passwordToggle?: boolean
 }
 
-export function AuthField({ error, icon, label, passwordToggle = false, secureTextEntry, ...inputProps }: AuthFieldProps) {
+export function AuthField({ error, icon, label, ...inputProps }: AuthFieldProps) {
   const [focused, setFocused] = useState(false)
-  const [passwordVisible, setPasswordVisible] = useState(false)
-  const isSecure = passwordToggle ? !passwordVisible : secureTextEntry
 
   return (
     <View style={styles.fieldGroup}>
@@ -119,20 +112,8 @@ export function AuthField({ error, icon, label, passwordToggle = false, secureTe
             inputProps.onFocus?.(event)
           }}
           placeholderTextColor={appPalette.colors.neutral[400]}
-          secureTextEntry={isSecure}
           style={styles.input}
         />
-        {passwordToggle ? (
-          <Pressable
-            accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
-            accessibilityRole="button"
-            hitSlop={10}
-            onPress={() => setPasswordVisible((visible) => !visible)}
-            style={({ pressed }) => [styles.inputAction, pressed && styles.pressed]}
-          >
-            <AuthIcon name={passwordVisible ? 'eyeOff' : 'eye'} />
-          </Pressable>
-        ) : null}
       </View>
       {error ? <Text style={styles.fieldError}>{error}</Text> : null}
     </View>
@@ -238,13 +219,6 @@ const styles = StyleSheet.create({
     outlineStyle: 'solid',
     outlineWidth: 0,
     textAlignVertical: 'center',
-  },
-  inputAction: {
-    width: 32,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: -6,
   },
   primaryButton: {
     minHeight: 56,

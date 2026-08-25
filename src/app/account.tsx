@@ -2,7 +2,9 @@ import { router } from 'expo-router'
 import { useEffect, useState } from 'react'
 import { Keyboard, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
+import { storeParentPin } from '@/features/auth/api/auth'
 import { AuthField, AuthPrimaryButton } from '@/features/auth/components/auth-ui'
+import { ParentPinInput } from '@/features/auth/components/parent-pin-input'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { ParentAppShell } from '@/features/navigation/components/child-app-shell'
 import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
@@ -10,20 +12,18 @@ import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 export default function AccountScreen() {
-  const { deviceMode, isRestoring, logout, readerMode, updateAccount, updatePassword, user } =
-    useAuth()
+  const { deviceMode, isRestoring, logout, readerMode, updateAccount, user } = useAuth()
   const [accountError, setAccountError] = useState<unknown>(null)
   const [accountMessage, setAccountMessage] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [confirmPin, setConfirmPin] = useState('')
+  const [isChangingPin, setIsChangingPin] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [isSavingAccount, setIsSavingAccount] = useState(false)
-  const [isSavingPassword, setIsSavingPassword] = useState(false)
+  const [isSavingPin, setIsSavingPin] = useState(false)
   const [nameDraft, setNameDraft] = useState<string | null>(null)
-  const [newPassword, setNewPassword] = useState('')
-  const [passwordError, setPasswordError] = useState<unknown>(null)
-  const [passwordMessage, setPasswordMessage] = useState('')
+  const [newPin, setNewPin] = useState('')
+  const [pinError, setPinError] = useState<unknown>(null)
+  const [pinMessage, setPinMessage] = useState('')
 
   useEffect(() => {
     if (!isRestoring && (!user || readerMode !== 'parent')) {
@@ -50,27 +50,22 @@ export default function AccountScreen() {
     }
   }
 
-  async function handleSavePassword() {
+  async function handleSavePin() {
     Keyboard.dismiss()
-    setPasswordError(null)
-    setPasswordMessage('')
-    setIsSavingPassword(true)
+    setPinError(null)
+    setPinMessage('')
+    setIsSavingPin(true)
 
     try {
-      await updatePassword({
-        current_password: currentPassword,
-        password: newPassword,
-        password_confirmation: confirmPassword,
-      })
-      setConfirmPassword('')
-      setCurrentPassword('')
-      setNewPassword('')
-      setPasswordMessage('Your password has been updated.')
-      setIsChangingPassword(false)
+      await storeParentPin(newPin, confirmPin)
+      setConfirmPin('')
+      setNewPin('')
+      setPinMessage('Your Parent PIN has been updated.')
+      setIsChangingPin(false)
     } catch (submissionError) {
-      setPasswordError(submissionError)
+      setPinError(submissionError)
     } finally {
-      setIsSavingPassword(false)
+      setIsSavingPin(false)
     }
   }
 
@@ -154,18 +149,18 @@ export default function AccountScreen() {
         </View>
 
         <View style={styles.card}>
-          <View style={styles.passwordHeader}>
-            <View style={styles.passwordCopy}>
-              <Text style={styles.sectionTitle}>PASSWORD</Text>
-              <Text style={styles.detailValue}>Keep your parent account secure.</Text>
+          <View style={styles.pinHeader}>
+            <View style={styles.pinCopy}>
+              <Text style={styles.sectionTitle}>PARENT PIN</Text>
+              <Text style={styles.detailValue}>Used to log in and open the parent area.</Text>
             </View>
-            {!isChangingPassword ? (
+            {!isChangingPin ? (
               <Pressable
                 accessibilityRole="button"
                 onPress={() => {
-                  setIsChangingPassword(true)
-                  setPasswordError(null)
-                  setPasswordMessage('')
+                  setIsChangingPin(true)
+                  setPinError(null)
+                  setPinMessage('')
                 }}
                 style={({ pressed }) => pressed && styles.pressed}
               >
@@ -174,81 +169,55 @@ export default function AccountScreen() {
             ) : null}
           </View>
 
-          {isChangingPassword ? (
-            <View style={styles.passwordForm}>
-              <AuthField
-                autoCapitalize="none"
-                autoComplete="current-password"
-                editable={!isSavingPassword}
-                error={getApiFieldError(passwordError, 'current_password')}
-                icon="lock"
-                label="CURRENT PASSWORD"
-                onChangeText={setCurrentPassword}
-                passwordToggle
-                placeholder="Enter current password"
-                textContentType="password"
-                value={currentPassword}
+          {isChangingPin ? (
+            <View style={styles.pinForm}>
+              <ParentPinInput
+                disabled={isSavingPin}
+                error={getApiFieldError(pinError, 'pin')}
+                label="NEW 4-DIGIT PIN"
+                onChange={(value) => {
+                  setNewPin(value)
+                  setPinError(null)
+                }}
+                value={newPin}
               />
-              <AuthField
-                autoCapitalize="none"
-                autoComplete="new-password"
-                editable={!isSavingPassword}
-                error={getApiFieldError(passwordError, 'password')}
-                icon="lockReset"
-                label="NEW PASSWORD"
-                onChangeText={setNewPassword}
-                passwordToggle
-                placeholder="At least 8 characters"
-                textContentType="newPassword"
-                value={newPassword}
+              <ParentPinInput
+                disabled={isSavingPin}
+                error={getApiFieldError(pinError, 'pin_confirmation')}
+                label="CONFIRM NEW PIN"
+                onChange={(value) => {
+                  setConfirmPin(value)
+                  setPinError(null)
+                }}
+                value={confirmPin}
               />
-              <AuthField
-                autoCapitalize="none"
-                autoComplete="new-password"
-                editable={!isSavingPassword}
-                error={getApiFieldError(passwordError, 'password_confirmation')}
-                icon="lockReset"
-                label="CONFIRM NEW PASSWORD"
-                onChangeText={setConfirmPassword}
-                passwordToggle
-                placeholder="Repeat new password"
-                returnKeyType="done"
-                textContentType="newPassword"
-                value={confirmPassword}
-              />
-              {passwordError ? (
+              {pinError ? (
                 <Text accessibilityRole="alert" style={styles.errorText}>
-                  {getApiErrorMessage(passwordError, 'We could not update your password.')}
+                  {getApiErrorMessage(pinError, 'We could not update your Parent PIN.')}
                 </Text>
               ) : null}
               <AuthPrimaryButton
-                disabled={
-                  isSavingPassword ||
-                  !currentPassword ||
-                  !newPassword ||
-                  !confirmPassword
-                }
-                label={isSavingPassword ? 'UPDATING…' : 'UPDATE PASSWORD'}
-                onPress={() => void handleSavePassword()}
+                disabled={isSavingPin || newPin.length !== 4 || confirmPin.length !== 4}
+                label={isSavingPin ? 'UPDATING…' : 'UPDATE PIN'}
+                onPress={() => void handleSavePin()}
               />
               <Pressable
                 accessibilityRole="button"
-                disabled={isSavingPassword}
+                disabled={isSavingPin}
                 onPress={() => {
-                  setConfirmPassword('')
-                  setCurrentPassword('')
-                  setNewPassword('')
-                  setPasswordError(null)
-                  setIsChangingPassword(false)
+                  setConfirmPin('')
+                  setNewPin('')
+                  setPinError(null)
+                  setIsChangingPin(false)
                 }}
                 style={({ pressed }) => [styles.cancelButton, pressed && styles.pressed]}
               >
                 <Text style={styles.cancelLabel}>CANCEL</Text>
               </Pressable>
             </View>
-          ) : passwordMessage ? (
+          ) : pinMessage ? (
             <Text accessibilityRole="alert" style={styles.successText}>
-              {passwordMessage}
+              {pinMessage}
             </Text>
           ) : null}
         </View>
@@ -359,17 +328,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     lineHeight: 18,
   },
-  passwordHeader: {
+  pinHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 16,
   },
-  passwordCopy: {
+  pinCopy: {
     flex: 1,
     gap: 5,
   },
-  passwordForm: {
+  pinForm: {
     gap: 18,
   },
   cancelButton: {

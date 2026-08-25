@@ -8,6 +8,7 @@ import {
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
+import { ParentPinInput } from '@/features/auth/components/parent-pin-input'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
 import { appColors, appPalette } from '@/theme/colors'
@@ -24,11 +25,11 @@ function goBack() {
 
 export default function SignUpScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false)
-  const [confirmPassword, setConfirmPassword] = useState('')
+  const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState<unknown>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [name, setName] = useState('')
-  const [password, setPassword] = useState('')
+  const [pin, setPin] = useState('')
   const [phone, setPhone] = useState('')
   const { register } = useAuth()
 
@@ -41,8 +42,8 @@ export default function SignUpScreen() {
       await register({
         name: name.trim(),
         phone,
-        password,
-        password_confirmation: confirmPassword,
+        pin,
+        pin_confirmation: confirmPin,
         terms: agreedToTerms,
       })
       router.replace('/device-setup')
@@ -93,33 +94,25 @@ export default function SignUpScreen() {
             textContentType="telephoneNumber"
             value={phone}
           />
-          <AuthField
-            autoCapitalize="none"
-            autoComplete="new-password"
-            editable={!isSubmitting}
-            error={getApiFieldError(error, 'password')}
-            icon="lock"
-            label="PASSWORD"
-            onChangeText={setPassword}
-            passwordToggle
-            placeholder="Min. 8 characters"
-            returnKeyType="next"
-            textContentType="newPassword"
-            value={password}
+          <ParentPinInput
+            disabled={isSubmitting}
+            error={getApiFieldError(error, 'pin')}
+            label="CREATE A 4-DIGIT PARENT PIN"
+            onChange={(value) => {
+              setPin(value)
+              setError(null)
+            }}
+            value={pin}
           />
-          <AuthField
-            autoCapitalize="none"
-            autoComplete="new-password"
-            editable={!isSubmitting}
-            error={getApiFieldError(error, 'password_confirmation')}
-            icon="lockReset"
-            label="CONFIRM PASSWORD"
-            onChangeText={setConfirmPassword}
-            placeholder="Confirm your password"
-            returnKeyType="done"
-            secureTextEntry
-            textContentType="newPassword"
-            value={confirmPassword}
+          <ParentPinInput
+            disabled={isSubmitting}
+            error={getApiFieldError(error, 'pin_confirmation')}
+            label="CONFIRM PARENT PIN"
+            onChange={(value) => {
+              setConfirmPin(value)
+              setError(null)
+            }}
+            value={confirmPin}
           />
         </View>
 
@@ -148,7 +141,7 @@ export default function SignUpScreen() {
         ) : null}
 
         <AuthPrimaryButton
-          disabled={isSubmitting}
+          disabled={isSubmitting || pin.length !== 4 || confirmPin.length !== 4}
           label={isSubmitting ? 'CREATING ACCOUNT…' : 'CREATE ACCOUNT'}
           onPress={() => void handleSubmit()}
         />

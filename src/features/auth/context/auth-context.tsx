@@ -7,7 +7,6 @@ import {
   logout as requestLogout,
   register as requestRegistration,
   updateParentAccount as requestAccountUpdate,
-  updateParentPassword as requestPasswordUpdate,
 } from '@/features/auth/api/auth'
 import {
   clearAuthToken,
@@ -30,7 +29,6 @@ import type {
   LoginInput,
   RegisterInput,
   UpdateParentAccountInput,
-  UpdateParentPasswordInput,
 } from '@/features/auth/types'
 
 export type ReaderMode = 'child' | 'parent'
@@ -52,7 +50,6 @@ type AuthContextValue = {
   selectProfile: (profile: ChildProfile) => void
   updateAccount: (input: UpdateParentAccountInput) => Promise<AuthUser>
   updateChildProfile: (profile: ChildProfile) => void
-  updatePassword: (input: UpdateParentPasswordInput) => Promise<void>
   user: AuthUser | null
 }
 
@@ -156,11 +153,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setUser(updatedUser)
     return updatedUser
   }, [])
-
-  const updatePassword = useCallback(
-    (input: UpdateParentPasswordInput) => requestPasswordUpdate(input),
-    [],
-  )
 
   const addChildProfile = useCallback((profile: ChildProfile, options?: { select?: boolean }) => {
     setUser((currentUser) =>
@@ -284,7 +276,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectProfile,
       updateAccount,
       updateChildProfile,
-      updatePassword,
       user,
     }),
     [
@@ -304,7 +295,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
       selectProfile,
       updateAccount,
       updateChildProfile,
-      updatePassword,
       user,
     ],
   )

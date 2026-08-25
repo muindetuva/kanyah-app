@@ -28,24 +28,18 @@ export type AuthResponse = {
 export type RegisterInput = {
   name: string
   phone: string
-  password: string
-  password_confirmation: string
+  pin: string
+  pin_confirmation: string
   terms: boolean
 }
 
 export type LoginInput = {
   phone: string
-  password: string
+  pin: string
 }
 
 export type UpdateParentAccountInput = {
   name: string
-}
-
-export type UpdateParentPasswordInput = {
-  current_password: string
-  password: string
-  password_confirmation: string
 }
 
 export type CreateChildProfileInput = {

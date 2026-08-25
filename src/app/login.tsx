@@ -8,6 +8,7 @@ import {
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
+import { ParentPinInput } from '@/features/auth/components/parent-pin-input'
 import { useAuth } from '@/features/auth/context/auth-context'
 import { getApiErrorMessage, getApiFieldError } from '@/lib/api/client'
 import { appColors, appPalette } from '@/theme/colors'
@@ -25,7 +26,7 @@ function goBack() {
 export default function LoginScreen() {
   const [error, setError] = useState<unknown>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [password, setPassword] = useState('')
+  const [pin, setPin] = useState('')
   const [phone, setPhone] = useState('')
   const { login } = useAuth()
 
@@ -35,7 +36,7 @@ export default function LoginScreen() {
     setIsSubmitting(true)
 
     try {
-      await login({ phone, password })
+      await login({ phone, pin })
       router.replace('/')
     } catch (submissionError) {
       setError(submissionError)
@@ -70,30 +71,16 @@ export default function LoginScreen() {
             textContentType="telephoneNumber"
             value={phone}
           />
-          <View>
-            <AuthField
-              autoCapitalize="none"
-              autoComplete="current-password"
-              editable={!isSubmitting}
-              error={getApiFieldError(error, 'password')}
-              icon="lock"
-              label="PASSWORD"
-              onChangeText={setPassword}
-              passwordToggle
-              placeholder="Enter your password"
-              returnKeyType="done"
-              textContentType="password"
-              value={password}
-            />
-            <Pressable
-              accessibilityRole="link"
-              hitSlop={8}
-              onPress={Keyboard.dismiss}
-              style={({ pressed }) => [styles.forgotButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
-          </View>
+          <ParentPinInput
+            disabled={isSubmitting}
+            error={getApiFieldError(error, 'pin')}
+            label="4-DIGIT PARENT PIN"
+            onChange={(value) => {
+              setPin(value)
+              setError(null)
+            }}
+            value={pin}
+          />
         </View>
 
         {error ? (
@@ -103,7 +90,7 @@ export default function LoginScreen() {
         ) : null}
 
         <AuthPrimaryButton
-          disabled={isSubmitting}
+          disabled={isSubmitting || pin.length !== 4}
           label={isSubmitting ? 'LOGGING IN…' : 'LOG IN'}
           onPress={() => void handleSubmit()}
         />
@@ -169,16 +156,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
-  },
-  forgotButton: {
-    alignSelf: 'flex-end',
-    minHeight: 38,
-    justifyContent: 'center',
-  },
-  forgotText: {
-    color: appColors.actions.secondary,
-    fontSize: 14,
-    lineHeight: 20,
   },
   footerRow: {
     minHeight: 44,

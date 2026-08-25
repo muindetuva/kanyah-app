@@ -1,12 +1,11 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { useEffect, useState } from 'react'
-import { Keyboard, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Keyboard, StyleSheet, Text, View } from 'react-native'
 
-import { verifyParentPassword, verifyParentPin } from '@/features/auth/api/auth'
+import { verifyParentPin } from '@/features/auth/api/auth'
 import {
   AuthBackButton,
-  AuthField,
   AuthPrimaryButton,
   AuthShell,
 } from '@/features/auth/components/auth-ui'
@@ -20,8 +19,6 @@ export default function ParentUnlockScreen() {
   const { next } = useLocalSearchParams<{ next?: string }>()
   const [error, setError] = useState<unknown>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [method, setMethod] = useState<'password' | 'pin'>('pin')
-  const [password, setPassword] = useState('')
   const [pendingDestination, setPendingDestination] = useState<
     'create-profile' | 'parent-home' | null
   >(null)
@@ -63,11 +60,7 @@ export default function ParentUnlockScreen() {
 
     try {
       if (deviceMode !== 'parent') {
-        if (method === 'pin') {
-          await verifyParentPin(pin)
-        } else {
-          await verifyParentPassword(password)
-        }
+        await verifyParentPin(pin)
       }
 
       setPendingDestination(next === 'create-profile' ? 'create-profile' : 'parent-home')
@@ -95,43 +88,20 @@ export default function ParentUnlockScreen() {
           <Text accessibilityRole="header" style={styles.title}>
             PARENT ACCESS
           </Text>
-          <Text style={styles.subtitle}>
-            {method === 'pin'
-              ? 'Enter your four-digit Parent PIN.'
-              : 'Use your Kanyah account password instead.'}
-          </Text>
+          <Text style={styles.subtitle}>Enter your four-digit Parent PIN.</Text>
         </View>
 
-        {method === 'pin' ? (
-          <ParentPinInput
-            autoFocus
-            disabled={isSubmitting}
-            error={getApiFieldError(error, 'pin')}
-            label="ENTER PARENT PIN"
-            onChange={(value) => {
-              setPin(value)
-              setError(null)
-            }}
-            value={pin}
-          />
-        ) : (
-          <AuthField
-            autoCapitalize="none"
-            autoComplete="current-password"
-            editable={!isSubmitting}
-            error={getApiFieldError(error, 'password')}
-            icon="lock"
-            label="ACCOUNT PASSWORD"
-            onChangeText={(value) => {
-              setPassword(value)
-              setError(null)
-            }}
-            passwordToggle
-            placeholder="Enter your password"
-            textContentType="password"
-            value={password}
-          />
-        )}
+        <ParentPinInput
+          autoFocus
+          disabled={isSubmitting}
+          error={getApiFieldError(error, 'pin')}
+          label="ENTER PARENT PIN"
+          onChange={(value) => {
+            setPin(value)
+            setError(null)
+          }}
+          value={pin}
+        />
 
         {error ? (
           <Text accessibilityRole="alert" style={styles.error}>
@@ -140,23 +110,10 @@ export default function ParentUnlockScreen() {
         ) : null}
 
         <AuthPrimaryButton
-          disabled={(method === 'pin' ? pin.length !== 4 : !password) || isSubmitting}
+          disabled={pin.length !== 4 || isSubmitting}
           label={isSubmitting ? 'CHECKING…' : 'UNLOCK'}
           onPress={() => void unlock()}
         />
-
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => {
-            setMethod((current) => (current === 'pin' ? 'password' : 'pin'))
-            setError(null)
-          }}
-          style={({ pressed }) => [styles.recoveryButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.recoveryText}>
-            {method === 'pin' ? 'Forgot PIN? Use account password' : 'Use Parent PIN instead'}
-          </Text>
-        </Pressable>
       </View>
     </AuthShell>
   )
@@ -216,20 +173,5 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 18,
     textAlign: 'center',
-  },
-  recoveryButton: {
-    minHeight: 38,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  recoveryText: {
-    color: appColors.actions.secondary,
-    fontSize: 14,
-    fontWeight: '600',
-    lineHeight: 20,
-    textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.72,
   },
 })

@@ -5,7 +5,6 @@ import type {
   LoginInput,
   RegisterInput,
   UpdateParentAccountInput,
-  UpdateParentPasswordInput,
 } from '@/features/auth/types'
 import { apiGet, apiPatch, apiPost, apiPut } from '@/lib/api/client'
 
@@ -31,10 +30,6 @@ export async function updateParentAccount(input: UpdateParentAccountInput): Prom
   return response.data
 }
 
-export async function updateParentPassword(input: UpdateParentPasswordInput): Promise<void> {
-  await apiPut<{ message: string }>('/api/v1/auth/password', input, true)
-}
-
 export async function storeParentPin(pin: string, pinConfirmation: string): Promise<void> {
   await apiPut<{ has_parent_pin: true; message: string }>(
     '/api/v1/auth/parent-pin',
@@ -45,12 +40,4 @@ export async function storeParentPin(pin: string, pinConfirmation: string): Prom
 
 export async function verifyParentPin(pin: string): Promise<void> {
   await apiPost<{ verified: true }>('/api/v1/auth/parent-pin/verify', { pin }, true)
-}
-
-export async function verifyParentPassword(password: string): Promise<void> {
-  await apiPost<{ verified: true }>(
-    '/api/v1/auth/parent-password/verify',
-    { password },
-    true,
-  )
 }
