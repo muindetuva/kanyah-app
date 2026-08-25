@@ -10,7 +10,7 @@ import {
   ChildProgressHero,
   RecentActivity,
   RecentBadges,
-  WeeklyReadingChart,
+  // WeeklyReadingChart,
 } from '@/features/progress/components/progress-sections'
 import { useParentProgress } from '@/features/progress/hooks/use-parent-progress'
 import { appColors, appPalette } from '@/theme/colors'
@@ -86,7 +86,7 @@ export default function ChildProgressScreen() {
           <>
             <ChildProgressHero summary={summary} />
             <RecentBadges badges={summary.recentBadges} />
-            <WeeklyReadingChart activity={summary.weeklyActivity} />
+            {/* <WeeklyReadingChart activity={summary.weeklyActivity} /> */}
             <CategoryProgress categories={summary.categoryProgress} />
             <RecentActivity activity={summary.recentActivity} />
           </>
