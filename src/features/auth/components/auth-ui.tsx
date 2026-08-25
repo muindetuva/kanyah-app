@@ -18,11 +18,12 @@ import { KanyahScreenBackground } from '@/components/kanyah-screen-background'
 import { MobileFrame } from '@/components/mobile-frame'
 import { appColors, appPalette } from '@/theme/colors'
 
-type AuthIconName = 'arrowBack' | 'arrowForward' | 'person' | 'phone'
+type AuthIconName = 'arrowBack' | 'arrowForward' | 'calendar' | 'person' | 'phone'
 
 const iconNames = {
   arrowBack: { ios: 'arrow.left' as const, android: 'arrow_back' as const, web: 'arrow_back' as const },
   arrowForward: { ios: 'arrow.right' as const, android: 'arrow_forward' as const, web: 'arrow_forward' as const },
+  calendar: { ios: 'calendar' as const, android: 'calendar_month' as const, web: 'calendar_month' as const },
   person: { ios: 'person' as const, android: 'person_outline' as const, web: 'person_outline' as const },
   phone: { ios: 'phone' as const, android: 'phone' as const, web: 'phone' as const },
 } as const
@@ -89,7 +90,7 @@ export function AuthBackButton({ onPress }: AuthBackButtonProps) {
 
 type AuthFieldProps = TextInputProps & {
   error?: string
-  icon: Extract<AuthIconName, 'person' | 'phone'>
+  icon: Extract<AuthIconName, 'calendar' | 'person' | 'phone'>
   label: string
 }
 

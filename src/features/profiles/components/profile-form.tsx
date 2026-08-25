@@ -18,6 +18,42 @@ import { appTypography } from '@/theme/typography'
 
 const avatarOptions: ChildAvatarKey[] = ['paw', 'explorer', 'rocket', 'hare']
 
+function dateInputFromIso(value?: string | null): string {
+  if (!value) {
+    return ''
+  }
+
+  const [year, month, day] = value.split('-')
+  return `${day}/${month}/${year}`
+}
+
+function formatDateInput(value: string): string {
+  const digits = value.replace(/\D/g, '').slice(0, 8)
+  const parts = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4, 8)]
+  return parts.filter(Boolean).join('/')
+}
+
+function dateInputToIso(value: string): string | null {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value)
+
+  if (!match) {
+    return null
+  }
+
+  const [, day, month, year] = match
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)))
+
+  if (
+    date.getUTCFullYear() !== Number(year) ||
+    date.getUTCMonth() !== Number(month) - 1 ||
+    date.getUTCDate() !== Number(day)
+  ) {
+    return null
+  }
+
+  return `${year}-${month}-${day}`
+}
+
 type ProfileFormProps = {
   error: unknown
   initialProfile?: ChildProfile
@@ -47,11 +83,13 @@ export function ProfileForm({
   onDelete,
   onSubmit,
 }: ProfileFormProps) {
-  const [age, setAge] = useState(initialProfile?.age ?? 6)
   const [avatar, setAvatar] = useState<ChildAvatarKey>(
     initialProfile?.avatar_key ?? 'explorer',
   )
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [dateOfBirthInput, setDateOfBirthInput] = useState(
+    dateInputFromIso(initialProfile?.date_of_birth),
+  )
   const [name, setName] = useState(initialProfile?.display_name ?? '')
   const [photoActionsVisible, setPhotoActionsVisible] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
@@ -61,6 +99,11 @@ export function ProfileForm({
   const existingPhotoUrl = removeExistingPhoto ? null : initialProfile?.avatar_url
   const previewUrl = pickedPhoto?.uri ?? existingPhotoUrl
   const busy = isSubmitting || isDeleting
+  const dateOfBirth = dateInputToIso(dateOfBirthInput)
+  const dateError =
+    dateOfBirthInput.length === 10 && !dateOfBirth
+      ? 'Enter a valid date in DD/MM/YYYY format.'
+      : getApiFieldError(error, 'date_of_birth')
 
   function chooseBuiltInAvatar(option: ChildAvatarKey) {
     setAvatar(option)
@@ -119,7 +162,7 @@ export function ProfileForm({
   function submit() {
     onSubmit({
       display_name: name.trim(),
-      age,
+      date_of_birth: dateOfBirth ?? '',
       avatar_key: avatar,
       avatar: pickedPhoto,
       remove_avatar: removeExistingPhoto,
@@ -227,37 +270,19 @@ export function ProfileForm({
           value={name}
         />
 
-        <View style={styles.ageGroup}>
-          <Text style={styles.fieldLabel}>AGE</Text>
-          <View style={styles.ageStepper}>
-            <Pressable
-              accessibilityLabel="Decrease age"
-              accessibilityRole="button"
-              disabled={busy || age <= 1}
-              hitSlop={6}
-              onPress={() => setAge((currentAge) => Math.max(1, currentAge - 1))}
-              style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepperSymbol}>−</Text>
-            </Pressable>
-            <Text accessibilityLabel={`${age} years old`} style={styles.ageValue}>
-              {age}
-            </Text>
-            <Pressable
-              accessibilityLabel="Increase age"
-              accessibilityRole="button"
-              disabled={busy || age >= 17}
-              hitSlop={6}
-              onPress={() => setAge((currentAge) => Math.min(17, currentAge + 1))}
-              style={({ pressed }) => [styles.stepperButton, pressed && styles.pressed]}
-            >
-              <Text style={styles.stepperSymbol}>+</Text>
-            </Pressable>
-          </View>
-          {getApiFieldError(error, 'age') ? (
-            <Text style={styles.fieldError}>{getApiFieldError(error, 'age')}</Text>
-          ) : null}
-        </View>
+        <AuthField
+          autoComplete="birthdate-full"
+          editable={!busy}
+          error={dateError}
+          icon="calendar"
+          keyboardType="number-pad"
+          label="DATE OF BIRTH"
+          maxLength={10}
+          onChangeText={(value) => setDateOfBirthInput(formatDateInput(value))}
+          placeholder="DD/MM/YYYY"
+          returnKeyType="done"
+          value={dateOfBirthInput}
+        />
 
         <View style={styles.avatarGroup}>
           <Text style={styles.fieldLabel}>CHOOSE AN AVATAR</Text>
@@ -296,7 +321,7 @@ export function ProfileForm({
 
       <View style={styles.action}>
         <AuthPrimaryButton
-          disabled={busy || !name.trim()}
+          disabled={busy || !name.trim() || !dateOfBirth}
           label={
             isSubmitting
               ? mode === 'create'
@@ -453,41 +478,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.2,
     lineHeight: 18,
-  },
-  fieldError: {
-    color: appPalette.colors.primary[500],
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  ageGroup: {
-    gap: 8,
-  },
-  ageStepper: {
-    minHeight: 54,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    borderColor: appPalette.colors.secondary[100],
-    borderRadius: 12,
-    backgroundColor: appColors.backgrounds.secondary,
-  },
-  stepperButton: {
-    width: 54,
-    minHeight: 52,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepperSymbol: {
-    color: appPalette.colors.brown[500],
-    fontSize: 22,
-    lineHeight: 26,
-  },
-  ageValue: {
-    color: appPalette.colors.neutral[1000],
-    fontSize: 18,
-    fontWeight: '800',
-    lineHeight: 24,
   },
   avatarGroup: {
     gap: 12,

@@ -51,7 +51,7 @@ export default function ChildProfileScreen() {
     try {
       const updatedProfile = await requestProfileUpdate(activeProfile.id, {
         display_name: activeProfile.display_name,
-        age: activeProfile.age,
+        date_of_birth: activeProfile.date_of_birth ?? '',
         avatar_key: activeProfile.avatar_key,
         avatar: photo,
       })

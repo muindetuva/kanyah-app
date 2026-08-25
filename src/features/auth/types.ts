@@ -4,7 +4,7 @@ export type ChildProfile = {
   id: number
   display_name: string
   age: number
-  birth_year: number
+  date_of_birth: string | null
   avatar_key: ChildAvatarKey
   avatar_url: string | null
   status: 'active' | 'inactive'
@@ -44,7 +44,7 @@ export type UpdateParentAccountInput = {
 
 export type CreateChildProfileInput = {
   display_name: string
-  age: number
+  date_of_birth: string
   avatar_key: ChildAvatarKey
 }
 

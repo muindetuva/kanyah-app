@@ -44,7 +44,9 @@ async function makeProfileFormData(input: ChildProfileFormInput): Promise<FormDa
   const formData = new FormData()
 
   formData.append('display_name', input.display_name)
-  formData.append('age', String(input.age))
+  if (input.date_of_birth) {
+    formData.append('date_of_birth', input.date_of_birth)
+  }
   formData.append('avatar_key', input.avatar_key)
 
   if (input.avatar) {
