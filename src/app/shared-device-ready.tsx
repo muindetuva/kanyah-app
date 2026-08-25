@@ -14,13 +14,13 @@ import { appTypography } from '@/theme/typography'
 
 const guidance = [
   {
-    body: 'Choose your child from “Who’s Reading?” before handing them the device.',
+    body: 'Each reader chooses their own profile from “Who’s Reading?” when Kanyah opens.',
     icon: {
       ios: 'hand.raised.fill' as const,
       android: 'waving_hand' as const,
       web: 'waving_hand' as const,
     },
-    title: 'HANDING IT OVER',
+    title: 'CHOOSING A PROFILE',
   },
   {
     body: 'Choose Parent when you want to switch back, then enter your Parent PIN.',
