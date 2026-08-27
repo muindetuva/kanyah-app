@@ -33,6 +33,8 @@ import { appColors, appPalette } from '@/theme/colors'
 import { appTypography } from '@/theme/typography'
 
 const storyViewabilityConfig = { itemVisiblePercentThreshold: 60 }
+const readingCardGap = 14
+const readingCardTopPadding = 10
 
 type ReaderItem =
   | { card: StoryCard; id: string; kind: 'story' }
@@ -50,14 +52,41 @@ function ReadingPage({
   const artwork = card.image ?? story.coverImage
   const storedArtworkAspectRatio =
     artwork?.width && artwork.height ? artwork.width / artwork.height : null
+  const [readingArea, setReadingArea] = useState({ height: 0, width: 0 })
+  const [textPanelHeight, setTextPanelHeight] = useState(0)
   const [loadedArtworkAspectRatio, setLoadedArtworkAspectRatio] = useState<number | null>(null)
   const artworkAspectRatio = loadedArtworkAspectRatio ?? storedArtworkAspectRatio ?? 4 / 3
-  const artworkMaxHeight = Math.max(260, Math.round(height * 0.62))
+  const availableArtworkHeight = Math.max(
+    0,
+    readingArea.height - readingCardTopPadding - textPanelHeight - readingCardGap,
+  )
+  const naturalArtworkHeight = readingArea.width / artworkAspectRatio
+  const artworkHeight = Math.min(naturalArtworkHeight, availableArtworkHeight)
+  const artworkWidth = artworkHeight * artworkAspectRatio
+  const hasMeasuredArtwork = artworkHeight > 0 && artworkWidth > 0
 
   return (
     <View style={[styles.page, card.narration && styles.pageWithNarration, { height }]}>
-      <View style={styles.readingCard}>
-        <View style={styles.textPanel}>
+      <View
+        onLayout={({ nativeEvent }) => {
+          const nextHeight = Math.round(nativeEvent.layout.height)
+          const nextWidth = Math.round(nativeEvent.layout.width)
+
+          setReadingArea((current) =>
+            current.height === nextHeight && current.width === nextWidth
+              ? current
+              : { height: nextHeight, width: nextWidth },
+          )
+        }}
+        style={styles.readingCard}
+      >
+        <View
+          onLayout={({ nativeEvent }) => {
+            const nextHeight = Math.round(nativeEvent.layout.height)
+            setTextPanelHeight((current) => (current === nextHeight ? current : nextHeight))
+          }}
+          style={styles.textPanel}
+        >
           <Text style={styles.cardText}>{card.content}</Text>
         </View>
         <StoryArtwork
@@ -67,7 +96,9 @@ function ReadingPage({
           onAspectRatioResolved={setLoadedArtworkAspectRatio}
           style={[
             styles.pageArtwork,
-            { aspectRatio: artworkAspectRatio, maxHeight: artworkMaxHeight },
+            hasMeasuredArtwork
+              ? { height: artworkHeight, width: artworkWidth }
+              : { aspectRatio: artworkAspectRatio },
           ]}
         />
       </View>
@@ -488,8 +519,8 @@ const styles = StyleSheet.create({
   },
   readingCard: {
     flex: 1,
-    gap: 14,
-    paddingTop: 10,
+    gap: readingCardGap,
+    paddingTop: readingCardTopPadding,
   },
   textPanel: {
     alignItems: 'center',
@@ -509,6 +540,7 @@ const styles = StyleSheet.create({
     textAlign: 'left',
   },
   pageArtwork: {
+    alignSelf: 'center',
     width: '100%',
     borderRadius: 20,
   },
