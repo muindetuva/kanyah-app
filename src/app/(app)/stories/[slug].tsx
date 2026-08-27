@@ -1,7 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router'
 import { SymbolView } from 'expo-symbols'
 import { type ReactNode, useState } from 'react'
-import { ScrollView, Pressable, StyleSheet, Text, View } from 'react-native'
+import {
+  ScrollView,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+} from 'react-native'
 
 import { useAuth } from '@/features/auth/context/auth-context'
 import {
@@ -35,6 +42,7 @@ function returnToLibrary() {
 }
 
 export default function StorySummaryScreen() {
+  const { height: viewportHeight } = useWindowDimensions()
   const params = useLocalSearchParams<{ slug?: string | string[] }>()
   const slug = Array.isArray(params.slug) ? params.slug[0] : params.slug
   const storyQuery = useStory(slug)
@@ -81,7 +89,7 @@ export default function StorySummaryScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.hero}>
+        <View style={[styles.hero, { height: viewportHeight * 0.25 }]}>
           <StoryArtwork
             accessibilityLabel={story.coverImage?.alt ?? story.title}
             imageUrl={story.coverImage?.url}
@@ -152,24 +160,6 @@ export default function StorySummaryScreen() {
             <Text style={styles.summary}>{story.summary}</Text>
           </View>
 
-          <Pressable
-            accessibilityRole="button"
-            onPress={() =>
-              router.push({
-                pathname: '/stories/[slug]/read',
-                params: { slug: story.slug },
-              })
-            }
-            style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
-          >
-            <Text style={styles.startButtonText}>START READING</Text>
-            <SymbolView
-              name={{ ios: 'book.closed', android: 'menu_book', web: 'menu_book' }}
-              size={20}
-              tintColor={appColors.text.onPrimary}
-            />
-          </Pressable>
-
           {cardsQuery.isPending || offlineStatus === 'saving' ? (
             <View accessibilityLiveRegion="polite" style={styles.offlineStatus}>
               <SymbolView
@@ -191,6 +181,24 @@ export default function StorySummaryScreen() {
               <Text style={styles.offlineStatusText}>Available offline</Text>
             </View>
           ) : null}
+
+          <Pressable
+            accessibilityRole="button"
+            onPress={() =>
+              router.push({
+                pathname: '/stories/[slug]/read',
+                params: { slug: story.slug },
+              })
+            }
+            style={({ pressed }) => [styles.startButton, pressed && styles.startButtonPressed]}
+          >
+            <Text style={styles.startButtonText}>START READING</Text>
+            <SymbolView
+              name={{ ios: 'book.closed', android: 'menu_book', web: 'menu_book' }}
+              size={20}
+              tintColor={appColors.text.onPrimary}
+            />
+          </Pressable>
         </View>
       </ScrollView>
     </StoryShell>
@@ -203,7 +211,6 @@ const styles = StyleSheet.create({
   },
   hero: {
     position: 'relative',
-    height: 330,
     overflow: 'hidden',
     borderBottomLeftRadius: 34,
     borderBottomRightRadius: 34,
@@ -298,7 +305,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    marginTop: 30,
+    marginTop: 18,
     borderRadius: 29,
     backgroundColor: appColors.actions.primary,
     boxShadow: '0 7px 16px rgba(90, 52, 28, 0.18)',
@@ -320,7 +327,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 10,
+    marginTop: 14,
   },
   offlineStatusText: {
     color: appColors.text.secondary,
