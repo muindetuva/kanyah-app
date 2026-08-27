@@ -31,7 +31,7 @@ export default function Root({ children }: PropsWithChildren) {
 const serviceWorkerRegistration = `
 if ('serviceWorker' in navigator && !['localhost', '127.0.0.1'].includes(window.location.hostname)) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('/sw.js').then(function (registration) {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(function (registration) {
       return navigator.serviceWorker.ready.then(function () {
         var resourceUrls = performance.getEntriesByType('resource')
           .map(function (entry) { return entry.name; })

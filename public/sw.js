@@ -1,12 +1,18 @@
-const APP_SHELL_CACHE = 'kanyah-app-shell-v1'
+try {
+  self.importScripts('/sw-version.js')
+} catch {
+  // Local development does not generate a deployment version.
+}
+
+const BUILD_VERSION = self.KANYAH_BUILD_VERSION || 'development'
+const APP_SHELL_CACHE = `kanyah-app-shell-${BUILD_VERSION}`
 const STORY_ASSET_CACHE = 'kanyah-story-assets-v1'
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
       .open(APP_SHELL_CACHE)
-      .then((cache) => cache.add(new Request('/', { cache: 'reload' })))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.add(new Request('/', { cache: 'reload' }))),
   )
 })
 
@@ -28,6 +34,11 @@ self.addEventListener('activate', (event) => {
 })
 
 self.addEventListener('message', (event) => {
+  if (event.data?.type === 'SKIP_WAITING') {
+    event.waitUntil(self.skipWaiting())
+    return
+  }
+
   if (event.data?.type !== 'CACHE_APP_SHELL' || !Array.isArray(event.data.urls)) {
     return
   }

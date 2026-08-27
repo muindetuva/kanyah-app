@@ -5,6 +5,7 @@ import { useColorScheme } from 'react-native'
 
 import { SessionLoadingScreen } from '@/features/auth/components/session-loading-screen'
 import { AuthProvider, useAuth } from '@/features/auth/context/auth-context'
+import { AppUpdatePrompt } from '@/features/pwa/components/app-update-prompt'
 import { useOfflineProgressSync } from '@/features/stories/hooks/use-offline-progress-sync'
 
 function AppNavigator() {
@@ -28,6 +29,7 @@ function AppNavigator() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }} />
+      <AppUpdatePrompt />
     </ThemeProvider>
   )
 }
