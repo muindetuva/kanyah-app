@@ -1,4 +1,4 @@
-import { Image } from 'expo-image'
+import { Image, type ImageContentFit } from 'expo-image'
 import { SymbolView } from 'expo-symbols'
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native'
 
@@ -19,14 +19,18 @@ const artworkSources = {
 type StoryArtworkProps = {
   accessibilityLabel?: string
   artwork?: LocalStoryArtwork
+  contentFit?: ImageContentFit
   imageUrl?: string | null
+  onAspectRatioResolved?: (aspectRatio: number) => void
   style?: StyleProp<ViewStyle>
 }
 
 export function StoryArtwork({
   accessibilityLabel,
   artwork,
+  contentFit = 'cover',
   imageUrl,
+  onAspectRatioResolved,
   style,
 }: StoryArtworkProps) {
   const source = imageUrl
@@ -40,7 +44,12 @@ export function StoryArtwork({
       {source ? (
         <Image
           accessibilityLabel={accessibilityLabel}
-          contentFit="cover"
+          contentFit={contentFit}
+          onLoad={({ source: loadedSource }) => {
+            if (loadedSource.width > 0 && loadedSource.height > 0) {
+              onAspectRatioResolved?.(loadedSource.width / loadedSource.height)
+            }
+          }}
           source={source}
           style={StyleSheet.absoluteFill}
         />

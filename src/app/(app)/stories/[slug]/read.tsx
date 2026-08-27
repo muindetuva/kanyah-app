@@ -47,7 +47,12 @@ function ReadingPage({
   height: number
   story: Story
 }) {
-  const artworkHeight = Math.min(420, Math.max(260, Math.round(height * 0.52)))
+  const artwork = card.image ?? story.coverImage
+  const storedArtworkAspectRatio =
+    artwork?.width && artwork.height ? artwork.width / artwork.height : null
+  const [loadedArtworkAspectRatio, setLoadedArtworkAspectRatio] = useState<number | null>(null)
+  const artworkAspectRatio = loadedArtworkAspectRatio ?? storedArtworkAspectRatio ?? 4 / 3
+  const artworkMaxHeight = Math.max(260, Math.round(height * 0.62))
 
   return (
     <View style={[styles.page, card.narration && styles.pageWithNarration, { height }]}>
@@ -57,8 +62,13 @@ function ReadingPage({
         </View>
         <StoryArtwork
           accessibilityLabel={card.image?.alt ?? story.coverImage?.alt ?? story.title}
+          contentFit="contain"
           imageUrl={card.image?.url ?? story.coverImage?.url}
-          style={[styles.pageArtwork, { height: artworkHeight }]}
+          onAspectRatioResolved={setLoadedArtworkAspectRatio}
+          style={[
+            styles.pageArtwork,
+            { aspectRatio: artworkAspectRatio, maxHeight: artworkMaxHeight },
+          ]}
         />
       </View>
     </View>
@@ -482,7 +492,6 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   textPanel: {
-    minHeight: 188,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 22,
